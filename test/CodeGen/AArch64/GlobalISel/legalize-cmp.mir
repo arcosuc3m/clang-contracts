@@ -1,0 +1,51 @@
+# RUN: llc -O0 -run-pass=legalizer -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @test_icmp() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_icmp
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+  - { id: 8, class: _ }
+  - { id: 9, class: _ }
+  - { id: 10, class: _ }
+body: |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+    %0(s64) = COPY %x0
+    %1(s64) = COPY %x0
+
+    %2(s8) = G_TRUNC %0
+    %3(s8) = G_TRUNC %1
+
+    ; CHECK: [[CMP1:%[0-9]+]](s32) = G_ICMP intpred(sge), %0(s64), %1
+    ; CHECK: [[CMP_T1:%[0-9]+]](s1) = G_TRUNC [[CMP1]]
+    %4(s1) = G_ICMP intpred(sge), %0, %1
+
+    ; CHECK: [[CSTMASK1:%[0-9]+]](s32) = G_CONSTANT i32 255
+    ; CHECK: [[T1:%[0-9]+]](s32) = G_TRUNC %0(s64)
+    ; CHECK: [[AND1:%[0-9]+]](s32) = G_AND [[T1]], [[CSTMASK1]]
+    ; CHECK: [[CSTMASK2:%[0-9]+]](s32) = G_CONSTANT i32 255
+    ; CHECK: [[T2:%[0-9]+]](s32) = G_TRUNC %1(s64)
+    ; CHECK: [[AND2:%[0-9]+]](s32) = G_AND [[T2]], [[CSTMASK2]]
+    ; CHECK: [[CMP2:%[0-9]+]](s32) = G_ICMP intpred(ult), [[AND1]](s32), [[AND2]]
+    ; CHECK: [[CMP_T2:%[0-9]+]](s1) = G_TRUNC [[CMP2]]
+    %8(s1) = G_ICMP intpred(ult), %2, %3
+
+    %9(p0) = G_INTTOPTR %0(s64)
+    %10(s1) = G_ICMP intpred(eq), %9(p0), %9(p0)
+...
