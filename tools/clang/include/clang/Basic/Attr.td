@@ -1004,6 +1004,20 @@ def ExtVectorType : Attr {
   let Documentation = [Undocumented];
 }
 
+//def Expect : Attr {
+def Expect : InheritableAttr {
+  let Spellings = [GNU<"expect">,
+                   CXX11<"", "expect", 201603>];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [ExprArgument<"Cond">,
+              BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
+              NamedArgument<"Parent", 0, /*fake*/ 1>];
+  let DuplicatesAllowedWhileMerging = 1;
+  let LateParsed = 1;
+  let TemplateDependent = 1;
+  let Documentation = [Undocumented];
+}
+
 def FallThrough : StmtAttr {
   let Spellings = [CXX11<"", "fallthrough", 201603>,
                    CXX11<"clang", "fallthrough">];
