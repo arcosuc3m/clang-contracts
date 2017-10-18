@@ -3579,6 +3579,11 @@ public:
   //                             Internal Helpers
   //===--------------------------------------------------------------------===//
 
+
+  /// EmitAssertAttr - for AssertAttr support.  See EmitAttributedStmt
+  void EmitAssertAttr(const AssertAttr *_Attr,
+                      SourceLocation Loc = SourceLocation());
+
   /// ContainsLabel - Return true if the statement contains a label in it.  If
   /// this statement is not executed normally, it not containing a label means
   /// that we can just remove the code.

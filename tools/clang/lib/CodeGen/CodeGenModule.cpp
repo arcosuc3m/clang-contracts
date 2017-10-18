@@ -2218,8 +2218,8 @@ llvm::Constant *CodeGenModule::GetAddrOfFunction(GlobalDecl GD,
                                  IsForDefinition);
 }
 
-static const FunctionDecl *
-GetRuntimeFunctionDecl(ASTContext &C, StringRef Name) {
+const FunctionDecl *
+CodeGenModule::GetRuntimeFunctionDecl(ASTContext &C, StringRef Name) {
   TranslationUnitDecl *TUDecl = C.getTranslationUnitDecl();
   DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
 
