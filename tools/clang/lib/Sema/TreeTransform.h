@@ -360,6 +360,7 @@ public:
 #define PRAGMA_SPELLING_ATTR(X)                                                \
   const X##Attr *Transform##X##Attr(const X##Attr *R) { return R; }
 #include "clang/Basic/AttrList.inc"
+  const AssertAttr *TransformAssertAttr(const AssertAttr *R) { return R; }
 
   /// \brief Transform the given expression.
   ///
@@ -6563,6 +6564,10 @@ const Attr *TreeTransform<Derived>::TransformAttr(const Attr *R) {
   case attr::X:                                                                \
     return getDerived().Transform##X##Attr(cast<X##Attr>(R));
 #include "clang/Basic/AttrList.inc"
+
+// Transform 'assert' attributes (template instantiation).
+  case attr::Assert:
+    return getDerived().TransformAssertAttr(cast<AssertAttr>(R));
   default:
     return R;
   }

@@ -860,6 +860,7 @@ namespace {
                           bool AllowInjectedClassName = false);
 
     const LoopHintAttr *TransformLoopHintAttr(const LoopHintAttr *LH);
+    const AssertAttr *TransformAssertAttr(const AssertAttr *A);
 
     ExprResult TransformPredefinedExpr(PredefinedExpr *E);
     ExprResult TransformDeclRefExpr(DeclRefExpr *E);
@@ -1226,6 +1227,17 @@ TemplateInstantiator::TransformLoopHintAttr(const LoopHintAttr *LH) {
   return LoopHintAttr::CreateImplicit(
       getSema().Context, LH->getSemanticSpelling(), LH->getOption(),
       LH->getState(), TransformedExpr, LH->getRange());
+}
+
+const AssertAttr *
+TemplateInstantiator::TransformAssertAttr(const AssertAttr *A) {
+  Expr *TransformedExpr = getDerived().TransformExpr(A->getCond()).get();
+
+  if (TransformedExpr == A->getCond())
+    return A;
+
+  return AssertAttr::CreateImplicit(
+      getSema().Context, TransformedExpr, A->getRange());
 }
 
 ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
