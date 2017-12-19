@@ -1025,6 +1025,14 @@ def FallThrough : StmtAttr {
   let Documentation = [FallthroughDocs];
 }
 
+def Assert : StmtAttr {
+  let Spellings = [CXX11<"", "assert", 201603>];
+  let Args = [ExprArgument<"Cond">];
+//  let Subjects = [NullStmt];
+//  let TemplateDependent = 1;
+  let Documentation = [Undocumented];
+}
+
 def FastCall : InheritableAttr {
   let Spellings = [GCC<"fastcall">, Keyword<"__fastcall">,
                    Keyword<"_fastcall">];

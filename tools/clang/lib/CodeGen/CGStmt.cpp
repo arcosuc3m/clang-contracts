@@ -554,7 +554,54 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
   EmitStmt(S.getSubStmt());
 }
 
+// copied from tools/clang/lib/Frontend/Rewrite/RewriteObjC.cpp and modified
+static CallExpr *
+SynthesizeCallToFunctionDecl(ASTContext *Context,
+                             FunctionDecl *FD,
+                             ArrayRef<Expr *> Args,
+                             SourceLocation Loc = SourceLocation()) {
+  QualType _Type = FD->getType();
+
+  DeclRefExpr *DRE = new (Context) DeclRefExpr(FD, false, _Type,
+                                               VK_LValue, SourceLocation());
+  QualType pToFunc = Context->getPointerType(_Type);
+  ImplicitCastExpr *ICE =
+    ImplicitCastExpr::Create(*Context, pToFunc, CK_FunctionToPointerDecay,
+                             DRE, nullptr, VK_RValue);
+
+  const FunctionType *FT = _Type->getAs<FunctionType>();
+
+  return new (Context) CallExpr(*Context, ICE, Args,
+                                FT->getCallResultType(*Context),
+                                VK_RValue, Loc);
+}
+
+void CodeGenFunction::EmitAssertAttr(const AssertAttr *_Attr,
+                                     SourceLocation Loc) {
+    CallExpr *CE = SynthesizeCallToFunctionDecl(&getContext(),
+           const_cast<FunctionDecl *>(CGM.GetRuntimeFunctionDecl(getContext(),
+                                      "abort")), {});
+
+    // negate expression
+    ParenExpr *PE = new (getContext()) ParenExpr(
+            SourceLocation(), SourceLocation(), _Attr->getCond());
+    UnaryOperator *UO = new (getContext()) UnaryOperator(
+            PE, UO_LNot, PE->getType(), VK_RValue, OK_Ordinary,
+            SourceLocation());
+
+    auto _S = new (getContext()) IfStmt(getContext(),
+            Loc, false, nullptr, nullptr, UO, CE);
+    // TODO: optimize: "if.end" branch is more likely
+    EmitIfStmt(*_S);
+}
+
 void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
+  for (const auto *Attr : S.getAttrs()) {
+    // AssertAttr support
+    if (const AssertAttr *_Attr = dyn_cast<AssertAttr>(Attr))
+      EmitAssertAttr(_Attr, S.getAttrLoc());
+  }
+
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
 

@@ -53,6 +53,25 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const AttributeList &A,
   return ::new (S.Context) auto(Attr);
 }
 
+static Attr *handleAssertAttr(Sema &S, Stmt *St, const AttributeList &A,
+                                   SourceRange Range) {
+  AssertAttr Attr(A.getRange(), S.Context, A.getArgAsExpr(0),
+                       A.getAttributeSpellingListIndex());
+  if (!isa<NullStmt>(St)) {
+    S.Diag(A.getRange().getBegin(), diag::err_fallthrough_attr_wrong_target)
+        << Attr.getSpelling() << St->getLocStart();
+    return nullptr;
+  }
+
+  // If this is spelled as the standard C++1z attribute, but not in C++1z, warn
+  // about using it as an extension.
+  if (!S.getLangOpts().CPlusPlus1z && A.isCXX11Attribute() &&
+      !A.getScopeName())
+    S.Diag(A.getLoc(), diag::ext_cxx17_attr) << A.getName();
+
+  return ::new (S.Context) auto(Attr);
+}
+
 static Attr *handleSuppressAttr(Sema &S, Stmt *St, const AttributeList &A,
                                 SourceRange Range) {
   if (A.getNumArgs() < 1) {
@@ -298,6 +317,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const AttributeList &A,
     return nullptr;
   case AttributeList::AT_FallThrough:
     return handleFallThroughAttr(S, St, A, Range);
+  case AttributeList::AT_Assert:
+    return handleAssertAttr(S, St, A, Range);
   case AttributeList::AT_LoopHint:
     return handleLoopHintAttr(S, St, A, Range);
   case AttributeList::AT_OpenCLUnrollHint:

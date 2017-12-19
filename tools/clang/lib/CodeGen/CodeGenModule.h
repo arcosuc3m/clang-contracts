@@ -920,6 +920,9 @@ public:
     CXXGlobalDtors.emplace_back(DtorFn, Object);
   }
 
+  const FunctionDecl *
+  GetRuntimeFunctionDecl(ASTContext &C, StringRef Name);
+
   /// Create a new runtime function with the specified type and name.
   llvm::Constant *
   CreateRuntimeFunction(llvm::FunctionType *Ty, StringRef Name,
