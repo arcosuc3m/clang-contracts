@@ -903,6 +903,10 @@ public:
   /// Tell the consumer that this variable has been instantiated.
   void HandleCXXStaticMemberVarInstantiation(VarDecl *VD);
 
+  CallExpr *SynthesizeCallToFunctionDecl(ASTContext *Context,
+                             FunctionDecl *FD, ArrayRef<Expr *> Args,
+                             SourceLocation Loc = SourceLocation());
+
   /// \brief If the declaration has internal linkage but is inside an
   /// extern "C" linkage specification, prepare to emit an alias for it
   /// to the expected name.

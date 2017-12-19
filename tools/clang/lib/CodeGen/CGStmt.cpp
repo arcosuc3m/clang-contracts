@@ -554,31 +554,9 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
   EmitStmt(S.getSubStmt());
 }
 
-// copied from tools/clang/lib/Frontend/Rewrite/RewriteObjC.cpp and modified
-static CallExpr *
-SynthesizeCallToFunctionDecl(ASTContext *Context,
-                             FunctionDecl *FD,
-                             ArrayRef<Expr *> Args,
-                             SourceLocation Loc = SourceLocation()) {
-  QualType _Type = FD->getType();
-
-  DeclRefExpr *DRE = new (Context) DeclRefExpr(FD, false, _Type,
-                                               VK_LValue, SourceLocation());
-  QualType pToFunc = Context->getPointerType(_Type);
-  ImplicitCastExpr *ICE =
-    ImplicitCastExpr::Create(*Context, pToFunc, CK_FunctionToPointerDecay,
-                             DRE, nullptr, VK_RValue);
-
-  const FunctionType *FT = _Type->getAs<FunctionType>();
-
-  return new (Context) CallExpr(*Context, ICE, Args,
-                                FT->getCallResultType(*Context),
-                                VK_RValue, Loc);
-}
-
 void CodeGenFunction::EmitAssertAttr(const AssertAttr *_Attr,
                                      SourceLocation Loc) {
-    CallExpr *CE = SynthesizeCallToFunctionDecl(&getContext(),
+    CallExpr *CE = CGM.SynthesizeCallToFunctionDecl(&getContext(),
            const_cast<FunctionDecl *>(CGM.GetRuntimeFunctionDecl(getContext(),
                                       "abort")), {});
 

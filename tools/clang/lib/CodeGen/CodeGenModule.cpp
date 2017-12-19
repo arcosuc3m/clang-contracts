@@ -3215,6 +3215,41 @@ void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
   EmitTopLevelDecl(VD);
 }
 
+/// SynthesizeCallToFunctionDecl - generates a CallExpr that calls the given
+/// FunctionDecl. FD may be either a CXXMethodDecl or a regular function.
+/// Copied from tools/clang/lib/Frontend/Rewrite/RewriteObjC.cpp and modified
+CallExpr *CodeGenModule::SynthesizeCallToFunctionDecl(ASTContext *Context,
+                             FunctionDecl *FD, ArrayRef<Expr *> Args,
+                             SourceLocation Loc) {
+  QualType _Type = FD->getType();
+  const FunctionType *FT = _Type->getAs<FunctionType>();
+  CallExpr *CE;
+
+  if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    CXXThisExpr *TE = new (Context) CXXThisExpr(Loc, MD->getThisType(*Context),
+                                                false);
+    MemberExpr *ME = new (Context) MemberExpr(TE, true, Loc, FD,
+                                              FD->getNameInfo(), _Type,
+                                              VK_RValue, OK_Ordinary);
+
+    CE = new (Context) CXXMemberCallExpr(*Context, ME, Args,
+                                         FT->getCallResultType(*Context),
+                                         VK_RValue, Loc);
+  } else {
+    DeclRefExpr *DRE = new (Context) DeclRefExpr(FD, false, _Type,
+                                                 VK_LValue, SourceLocation());
+    QualType pToFunc = Context->getPointerType(_Type);
+    ImplicitCastExpr *ICE =
+      ImplicitCastExpr::Create(*Context, pToFunc, CK_FunctionToPointerDecay,
+                               DRE, nullptr, VK_RValue);
+
+    CE = new (Context) CallExpr(*Context, ICE, Args,
+                                FT->getCallResultType(*Context),
+                                VK_RValue, Loc);
+  }
+  return CE;
+}
+
 void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                                                  llvm::GlobalValue *GV) {
   const auto *D = cast<FunctionDecl>(GD.getDecl());
