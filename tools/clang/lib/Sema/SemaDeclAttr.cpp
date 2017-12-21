@@ -1018,17 +1018,26 @@ public:
 };
 }
 
-static void handleExpectAttr(Sema &S, Decl *D, const AttributeList &Attr) {
-  //S.Diag(Attr.getLoc(), diag::ext_clang_diagnose_if);
+static void handle_Expects_Ensures_Attr(Sema &S, Decl *D, const AttributeList &Attr) {
+  if (Attr.getKind() == AttributeList::AT_Ensures)
+    S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) << Attr.getName();
 
   Expr *Cond = Attr.getArgAsExpr(0);
 
+  // Check if the expression is dependent on function arguments
   bool ArgDependent = false;
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     ArgDependent = ArgumentDependenceChecker(FD).referencesArgs(Cond);
-  D->addAttr(::new (S.Context) ExpectAttr(
-      Attr.getRange(), S.Context, Cond, ArgDependent, cast<NamedDecl>(D),
-      Attr.getAttributeSpellingListIndex()));
+
+  if (Attr.getKind() == AttributeList::AT_Expects) {
+    D->addAttr(::new (S.Context) ExpectsAttr(
+        Attr.getRange(), S.Context, Cond, ArgDependent, cast<NamedDecl>(D),
+        Attr.getAttributeSpellingListIndex()));
+  } else {
+    D->addAttr(::new (S.Context) EnsuresAttr(
+        Attr.getRange(), S.Context, Cond, Attr.getArgAsIdent(1)->Ident,
+        ArgDependent, cast<NamedDecl>(D), Attr.getAttributeSpellingListIndex()));
+  }
 }
 
 static void handleDiagnoseIfAttr(Sema &S, Decl *D, const AttributeList &Attr) {
@@ -6122,8 +6131,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_EnableIf:
     handleEnableIfAttr(S, D, Attr);
     break;
-  case AttributeList::AT_Expect:
-    handleExpectAttr(S, D, Attr);
+  case AttributeList::AT_Expects:
+  case AttributeList::AT_Ensures:
+    handle_Expects_Ensures_Attr(S, D, Attr);
     break;
   case AttributeList::AT_DiagnoseIf:
     handleDiagnoseIfAttr(S, D, Attr);

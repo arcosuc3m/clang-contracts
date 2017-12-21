@@ -7039,6 +7039,14 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
           << attr.getName();
       break;
 
+    // These attributes appertain to the declarator, although they occur
+    //  void identifier(void) [[here]];
+    case AttributeList::AT_Expects:
+    case AttributeList::AT_Ensures:
+      moveAttrFromListToList(attr, state.getCurrentAttrListRef(),
+                             state.getDeclarator().getAttrListRef());
+      break;
+
     case AttributeList::IgnoredAttribute:
       break;
 
