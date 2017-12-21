@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TypeLocBuilder.h"
+#include "TreeTransform.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -2377,7 +2378,47 @@ static bool mergeAlignedAttrs(Sema &S, NamedDecl *New, Decl *Old) {
   return AnyAdded;
 }
 
-static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
+namespace {
+  // Given two FunctionDecl and an expression, transform the expression so that
+  // any reference to  an argument on the first FunctionDecl is translated to a
+  // reference to the corresponding name on the second FunctionDecl.
+  // 
+  // Used to merge inherited 'expects' or 'ensures' attributes.
+  class MergeContractAttrTransform : public TreeTransform<MergeContractAttrTransform> {
+    typedef TreeTransform<MergeContractAttrTransform> BaseTransform;
+    llvm::DenseMap<DeclarationName, DeclarationName> TransformedDN;
+  public:
+    MergeContractAttrTransform(Sema &SemaRef, FunctionDecl *OD,
+                               FunctionDecl *D) : BaseTransform(SemaRef) {
+      for (unsigned i = 0; i < OD->getNumParams(); ++i) {
+        TransformedLocalDecls.insert(std::make_pair(OD->getParamDecl(i), D->getParamDecl(i)));
+        TransformedDN.insert(std::make_pair(OD->getParamDecl(i)->getDeclName(),
+                                            D->getParamDecl(i)->getDeclName()));
+      }
+    }
+
+    DeclarationNameInfo TransformDeclarationNameInfo(const DeclarationNameInfo &NI) {
+      llvm::DenseMap<DeclarationName, DeclarationName>::iterator Known
+        = TransformedDN.find(NI.getName());
+      if (Known != TransformedDN.end())
+        return DeclarationNameInfo(Known->second, SourceLocation());
+
+      return NI;
+    }
+
+    ExprResult RebuildDeclRefExpr(NestedNameSpecifierLoc QualifierLoc,
+                                  ValueDecl *VD,
+                                  const DeclarationNameInfo &NameInfo,
+                                  TemplateArgumentListInfo *TemplateArgs) {
+      return ExprResult(DeclRefExpr::Create(SemaRef.getASTContext(),
+                                   QualifierLoc, SourceLocation(), VD, false,
+                                   NameInfo, VD->getType(), VK_LValue, nullptr,
+                                   TemplateArgs));
+    }
+  };
+}
+
+static bool mergeDeclAttribute(Sema &S, NamedDecl *D, Decl *Old,
                                const InheritableAttr *Attr,
                                Sema::AvailabilityMergeKind AMK) {
   // This function copies an attribute Attr from a previous declaration to the
@@ -2454,7 +2495,17 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if (const auto *UA = dyn_cast<UuidAttr>(Attr))
     NewAttr = S.mergeUuidAttr(D, UA->getRange(), AttrSpellingListIndex,
                               UA->getGuid());
-  else if (Attr->duplicatesAllowed() || !DeclHasAttr(D, Attr))
+  else if (const auto *A = dyn_cast<ExpectsAttr>(Attr)) {
+    // TODO: fix EnsuresAttr expression
+    if (A->getArgDependent()) {
+      NewAttr = new (S.Context) ExpectsAttr(A->getLocation(), S.Context,
+                  MergeContractAttrTransform(S, cast<FunctionDecl>(Old),
+                               cast<FunctionDecl>(D)).TransformExpr(A->getCond()).get(),
+                  A->getArgDependent(), A->getParent(), A->getSpellingListIndex());
+    } else {
+      NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
+    }
+  } else if (Attr->duplicatesAllowed() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
 
   if (NewAttr) {
@@ -2665,7 +2716,7 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     if (isa<UsedAttr>(I))
       continue;
 
-    if (mergeDeclAttribute(*this, New, I, LocalAMK))
+    if (mergeDeclAttribute(*this, New, Old, I, LocalAMK))
       foundAny = true;
   }
 
