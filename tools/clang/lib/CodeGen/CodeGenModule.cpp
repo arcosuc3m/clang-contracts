@@ -3250,9 +3250,77 @@ CallExpr *CodeGenModule::SynthesizeCallToFunctionDecl(ASTContext *Context,
   return CE;
 }
 
+/// SynthesizeCheckedFunctionBody - generates the body of a function that checks
+/// the preconditions (expects) and calls the '__unchecked' function
+static Stmt *
+SynthesizeCheckedFunctionBody(CodeGenModule *CGM, FunctionDecl *D, const AttrVec &Attrs) {
+  ASTContext &Context = CGM->getContext();
+  SourceLocation ISL;
+  SmallVector<Attr*, 8> AS_Attrs;
+
+  // translate 'expects' attributes into 'assert'
+  for (const auto *Attr : Attrs) {
+    if (const ExpectsAttr *_Attr = dyn_cast<ExpectsAttr>(Attr))
+      AS_Attrs.push_back(AssertAttr::CreateImplicit(Context, _Attr->getCond(),
+                                                    ISL));
+  }
+
+  // build the parameter list for function call
+  SmallVector<Expr*, 8> Args;
+  for (auto &P : D->parameters()) {
+    DeclRefExpr *DRE = new (Context) DeclRefExpr(P, false, P->getType(),
+                                                 VK_LValue, SourceLocation());
+    Args.push_back(ImplicitCastExpr::Create(Context, P->getType(),
+                             CK_LValueToRValue, DRE, nullptr, VK_RValue));
+  }
+  CallExpr *CE = CGM->SynthesizeCallToFunctionDecl(&Context, D, Args);
+  ReturnStmt *RS = new (Context) ReturnStmt(ISL, CE, nullptr);
+
+  // return the body: precondition checks + call __unchecked function (inlined)
+  return new (Context) CompoundStmt(Context, ArrayRef<Stmt *>{
+                                       AttributedStmt::Create(Context, ISL, AS_Attrs,
+                                       new (Context) NullStmt(ISL)),
+                                       RS,
+                             }, ISL, ISL);
+}
+
 void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                                                  llvm::GlobalValue *GV) {
   const auto *D = cast<FunctionDecl>(GD.getDecl());
+
+  // TODO: handle EnsuresAttr code generation
+  if (D->hasAttr<ExpectsAttr>()) {
+    IdentifierInfo *II = &getContext().Idents.get(D->getNameAsString()
+                             + CXX__UNCHECKEDFN);
+    FunctionDecl *FD, *_D = const_cast<FunctionDecl *>(D);
+
+    // Make a clone of the original FunctionDecl, but adds the CXX__UNCHECKEDFN
+    // suffix to the name.  Differentiates type (member/non-member function).
+    if (isa<CXXMethodDecl>(_D)) {
+      FD = CXXMethodDecl::Create(getContext(),
+              cast<CXXRecordDecl>(_D->getDeclContext()), _D->getLocStart(),
+              DeclarationNameInfo(DeclarationName(II), _D->getNameInfo().getLoc()),
+              _D->getType(), _D->getTypeSourceInfo(), _D->getStorageClass(),
+              _D->isInlineSpecified(), _D->isConstexpr(), _D->getLocEnd());
+    } else {
+      FD = FunctionDecl::Create(getContext(),
+              _D->getDeclContext(), _D->getLocStart(), _D->getNameInfo().getLoc(),
+              DeclarationName(II), _D->getType(), _D->getTypeSourceInfo(),
+              _D->getStorageClass(), _D->isInlineSpecified(),
+              _D->hasWrittenPrototype(), _D->isConstexpr());
+    }
+    FD->setImplicit();
+    FD->setParams(_D->parameters());
+    FD->setBody(_D->getBody());
+    _D->getParent()->addDecl(FD);
+
+    // Emit the '__unchecked' function
+    EmitGlobal(FD);
+
+    // Replaces the body of the original (not yet emitted) function
+    _D->setBody(SynthesizeCheckedFunctionBody(this, FD, D->getAttrs()));
+    _D->dropAttr<ExpectsAttr>();
+  }
 
   // Compute the function info and LLVM type.
   const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
@@ -3282,6 +3350,11 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   MaybeHandleStaticInExternC(D, Fn);
 
   maybeSetTrivialComdat(*D, *Fn);
+
+  // Sets the AlwaysInline attribute for '__unchecked' functions, so that they
+  // are inlined as part of the function that checks pre/post-conditions
+  if (D->isImplicit() && D->getName().contains(CXX__UNCHECKEDFN))
+    Fn->addFnAttr(llvm::Attribute::AlwaysInline);
 
   CodeGenFunction(*this).GenerateCode(D, Fn, FI);
 
