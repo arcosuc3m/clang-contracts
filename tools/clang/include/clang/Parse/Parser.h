@@ -121,6 +121,12 @@ class Parser : public CodeCompletionHandler {
   /// Objective-C contextual keywords.
   mutable IdentifierInfo *Ident_instancetype;
 
+  /// \brief Identifiers for contract-level (C++ contracts).
+  IdentifierInfo *Ident_axiom;
+  IdentifierInfo *Ident_default;
+  IdentifierInfo *Ident_audit;
+  IdentifierInfo *Ident_always;
+
   /// \brief Identifier for "introduced".
   IdentifierInfo *Ident_introduced;
 
@@ -2277,10 +2283,15 @@ private:
       ParseCXX11Attributes(attrs, endLoc);
   }
 
+  bool TryParseContractAttributeSpecifier(ParsedAttributes &attrs,
+                                          SourceLocation *EndLoc = nullptr);
   void ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
                                     SourceLocation *EndLoc = nullptr);
   void ParseCXX11Attributes(ParsedAttributesWithRange &attrs,
                             SourceLocation *EndLoc = nullptr);
+  unsigned
+  ParseContractAttrArgs(IdentifierInfo *AttrName, SourceLocation AttrNameLoc,
+                        ParsedAttributes &Attrs, SourceLocation *EndLoc);
   /// \brief Parses a C++-style attribute argument list. Returns true if this
   /// results in adding an attribute to the ParsedAttributes list.
   bool ParseCXX11AttributeArgs(IdentifierInfo *AttrName,

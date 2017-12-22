@@ -3830,6 +3830,69 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   }
 }
 
+unsigned Parser::ParseContractAttrArgs(IdentifierInfo *AttrName,
+                           SourceLocation AttrNameLoc,
+                           ParsedAttributes &Attrs, SourceLocation *EndLoc) {
+  AttributeList::Kind AttrKind =
+     AttributeList::getKind(AttrName, nullptr, AttributeList::AS_CXX11);
+  ArgsVector ArgExprs;
+  ExprResult ArgExpr(static_cast<Expr*>(nullptr));
+
+  if (!Ident_axiom) {
+    Ident_axiom = PP.getIdentifierInfo("axiom");
+    Ident_default = PP.getIdentifierInfo("default");
+    Ident_audit = PP.getIdentifierInfo("audit");
+    Ident_always = PP.getIdentifierInfo("always");
+  }
+
+  // parse contract-level and identifier used for return value (expects only)
+  IdentifierInfo *II1 = Ident_default, *II2 = nullptr;
+  SourceLocation Loc1, Loc2;
+  if (Tok.isOneOf(tok::identifier, tok::kw_default)) {
+    II1 = Tok.getIdentifierInfo();
+    Loc1 = ConsumeToken();
+  }
+  if (AttrKind == AttributeList::AT_Ensures && Tok.is(tok::identifier)) {
+    II2 = Tok.getIdentifierInfo();
+    Loc2 = ConsumeToken();
+  }
+
+  if (!(II1 == Ident_axiom || II1 == Ident_default
+                || II1 == Ident_audit || II1 == Ident_always)) {
+    if (!II2 && AttrKind == AttributeList::AT_Ensures) {
+      II2 = II1;
+      II1 = Ident_default;
+    } else {
+      Diag(Tok.getLocation(), diag::err_expected_contract_level) << AttrName->getNameStart();
+      goto out;
+    }
+  }
+
+  // expect ":" and parse expression
+  if (ExpectAndConsume(tok::colon))
+    goto out;
+
+  ArgExpr = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+  if (ArgExpr.isInvalid() || !Tok.is(tok::r_square)) {
+    Diag(Tok.getLocation(), diag::err_expected) << tok::r_square;
+    goto out;
+  }
+
+  ArgExprs.push_back(IdentifierLoc::create(Actions.Context, Loc1, II1));
+  ArgExprs.push_back(ArgExpr.get());
+  if (AttrKind == AttributeList::AT_Ensures)
+    ArgExprs.push_back(IdentifierLoc::create(Actions.Context, Loc2, II2));
+
+  Attrs.addNew(AttrName, SourceRange(AttrNameLoc, Tok.getLocation()), nullptr, SourceLocation(),
+               ArgExprs.data(), ArgExprs.size(), AttributeList::AS_CXX11);
+  if (EndLoc)
+    *EndLoc = Tok.getLocation();
+
+out:
+  SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
+  return static_cast<unsigned>(ArgExprs.size());
+}
+
 /// ParseCXX11AttributeArgs -- Parse a C++11 attribute-argument-clause.
 ///
 /// [C++11] attribute-argument-clause:
@@ -3906,6 +3969,24 @@ bool Parser::ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
   return true;
 }
 
+bool Parser::TryParseContractAttributeSpecifier(ParsedAttributes &attrs,
+                                          SourceLocation *endLoc) {
+  if (!Tok.is(tok::identifier) || !(Tok.getIdentifierInfo()->getName() == "expects"
+                             || Tok.getIdentifierInfo()->getName() == "ensures"
+                             || Tok.getIdentifierInfo()->getName() == "assert"))
+    return false;
+
+  SourceLocation AttrLoc;
+  IdentifierInfo *AttrName = nullptr;
+  AttrName = TryParseCXX11AttributeIdentifier(AttrLoc);
+
+  if (!ParseContractAttrArgs(AttrName, AttrLoc, attrs, endLoc))
+    attrs.addNew(AttrName, SourceRange(AttrLoc, AttrLoc),
+                 nullptr, SourceLocation(), nullptr, 0,
+                 AttributeList::AS_CXX11);
+  return true;
+}
+
 /// ParseCXX11AttributeSpecifier - Parse a C++11 attribute-specifier.
 ///
 /// [C++11] attribute-specifier:
@@ -3948,6 +4029,10 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
 
   SourceLocation CommonScopeLoc;
   IdentifierInfo *CommonScopeName = nullptr;
+  llvm::SmallDenseMap<IdentifierInfo*, SourceLocation, 4> SeenAttrs;
+
+  if (TryParseContractAttributeSpecifier(attrs, endLoc))
+    goto out;
   if (Tok.is(tok::kw_using)) {
     Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z
                                 ? diag::warn_cxx14_compat_using_attribute_ns
@@ -3962,8 +4047,6 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
     if (!TryConsumeToken(tok::colon) && CommonScopeName)
       Diag(Tok.getLocation(), diag::err_expected) << tok::colon;
   }
-
-  llvm::SmallDenseMap<IdentifierInfo*, SourceLocation, 4> SeenAttrs;
 
   while (Tok.isNot(tok::r_square)) {
     // attribute not present
@@ -4025,6 +4108,7 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
         << AttrName->getName();
   }
 
+out:
   if (ExpectAndConsume(tok::r_square))
     SkipUntil(tok::r_square);
   if (endLoc)

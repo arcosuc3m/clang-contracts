@@ -1007,7 +1007,8 @@ def ExtVectorType : Attr {
 def Expects : InheritableAttr {
   let Spellings = [CXX11<"", "expects", 201603>];
   let Subjects = SubjectList<[Function]>;
-  let Args = [ExprArgument<"Cond">,
+  let Args = [IdentifierArgument<"Level">,
+              ExprArgument<"Cond">,
               BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
               NamedArgument<"Parent", 0, /*fake*/ 1>];
   let DuplicatesAllowedWhileMerging = 1;
@@ -1019,7 +1020,8 @@ def Expects : InheritableAttr {
 def Ensures : InheritableAttr {
   let Spellings = [CXX11<"", "ensures", 201603>];
   let Subjects = SubjectList<[Function]>;
-  let Args = [ExprArgument<"Cond">,
+  let Args = [IdentifierArgument<"Level">,
+              ExprArgument<"Cond">,
               IdentifierArgument<"Ret">,
               BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
               NamedArgument<"Parent", 0, /*fake*/ 1>];
@@ -1038,7 +1040,8 @@ def FallThrough : StmtAttr {
 
 def Assert : StmtAttr {
   let Spellings = [CXX11<"", "assert", 201603>];
-  let Args = [ExprArgument<"Cond">];
+  let Args = [IdentifierArgument<"Level">,
+              ExprArgument<"Cond">];
 //  let Subjects = [NullStmt];
 //  let TemplateDependent = 1;
   let Documentation = [Undocumented];

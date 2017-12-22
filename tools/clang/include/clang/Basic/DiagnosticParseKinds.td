@@ -826,6 +826,10 @@ def warn_cxx14_compat_constexpr_on_lambda : Warning<
 def ext_constexpr_on_lambda_cxx17 : ExtWarn<
   "'constexpr' on lambda expressions is a C++17 extension">, InGroup<CXX17>;
 
+// Contract attributes
+def err_expected_contract_level : Error<
+  "expected contract-level after '%0' attribute">;
+
 // Availability attribute
 def err_expected_version : Error<
   "expected a version of the form 'major[.minor[.subminor]]'">;

@@ -55,7 +55,12 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const AttributeList &A,
 
 static Attr *handleAssertAttr(Sema &S, Stmt *St, const AttributeList &A,
                                    SourceRange Range) {
-  AssertAttr Attr(A.getRange(), S.Context, A.getArgAsExpr(0),
+  if (A.getNumArgs() < 2) {
+    S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments) << A.getName() << 2;
+    return nullptr;
+  }
+
+  AssertAttr Attr(A.getRange(), S.Context, A.getArgAsIdent(0)->Ident, A.getArgAsExpr(1),
                        A.getAttributeSpellingListIndex());
   if (!isa<NullStmt>(St)) {
     S.Diag(A.getRange().getBegin(), diag::err_fallthrough_attr_wrong_target)
