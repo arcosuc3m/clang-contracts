@@ -2498,7 +2498,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D, Decl *Old,
   else if (const auto *A = dyn_cast<ExpectsAttr>(Attr)) {
     // TODO: fix EnsuresAttr expression
     if (A->getArgDependent()) {
-      NewAttr = new (S.Context) ExpectsAttr(A->getLocation(), S.Context,
+      NewAttr = new (S.Context) ExpectsAttr(A->getLocation(), S.Context, A->getLevel(),
                   MergeContractAttrTransform(S, cast<FunctionDecl>(Old),
                                cast<FunctionDecl>(D)).TransformExpr(A->getCond()).get(),
                   A->getArgDependent(), A->getParent(), A->getSpellingListIndex());

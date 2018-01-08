@@ -3261,7 +3261,7 @@ SynthesizeCheckedFunctionBody(CodeGenModule *CGM, FunctionDecl *D, const AttrVec
   // translate 'expects' attributes into 'assert'
   for (const auto *Attr : Attrs) {
     if (const ExpectsAttr *_Attr = dyn_cast<ExpectsAttr>(Attr))
-      AS_Attrs.push_back(AssertAttr::CreateImplicit(Context, _Attr->getCond(),
+      AS_Attrs.push_back(AssertAttr::CreateImplicit(Context, _Attr->getLevel(), _Attr->getCond(),
                                                     ISL));
   }
 

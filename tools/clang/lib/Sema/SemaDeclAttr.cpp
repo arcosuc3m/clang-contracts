@@ -1022,7 +1022,8 @@ static void handle_Expects_Ensures_Attr(Sema &S, Decl *D, const AttributeList &A
   if (Attr.getKind() == AttributeList::AT_Ensures)
     S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) << Attr.getName();
 
-  Expr *Cond = Attr.getArgAsExpr(0);
+  IdentifierInfo *Level = Attr.getArgAsIdent(0)->Ident;
+  Expr *Cond = Attr.getArgAsExpr(1);
 
   // Check if the expression is dependent on function arguments
   bool ArgDependent = false;
@@ -1031,11 +1032,11 @@ static void handle_Expects_Ensures_Attr(Sema &S, Decl *D, const AttributeList &A
 
   if (Attr.getKind() == AttributeList::AT_Expects) {
     D->addAttr(::new (S.Context) ExpectsAttr(
-        Attr.getRange(), S.Context, Cond, ArgDependent, cast<NamedDecl>(D),
+        Attr.getRange(), S.Context, Level, Cond, ArgDependent, cast<NamedDecl>(D),
         Attr.getAttributeSpellingListIndex()));
   } else {
     D->addAttr(::new (S.Context) EnsuresAttr(
-        Attr.getRange(), S.Context, Cond, Attr.getArgAsIdent(1)->Ident,
+        Attr.getRange(), S.Context, Level, Cond, Attr.getArgAsIdent(2)->Ident,
         ArgDependent, cast<NamedDecl>(D), Attr.getAttributeSpellingListIndex()));
   }
 }
