@@ -2292,6 +2292,8 @@ def std_EQ : Joined<["-", "--"], "std=">, Flags<[CC1Option]>,
     #include "clang/Frontend/LangStandards.def"
     ;
   }]>;
+def build_level_EQ : Joined<["-", "--"], "build-level=">, Flags<[CC1Option, CC1AsOption, CoreOption]>,
+  HelpText<"Build level for this translation unit">, Values<"off,default,audit">;
 def stdlib_EQ : Joined<["-", "--"], "stdlib=">, Flags<[CC1Option]>,
   HelpText<"C++ standard library to use">, Values<"libc++,libstdc++,platform">;
 def sub__library : JoinedOrSeparate<["-"], "sub_library">;

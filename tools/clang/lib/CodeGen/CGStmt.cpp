@@ -556,6 +556,14 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
 
 void CodeGenFunction::EmitAssertAttr(const AssertAttr *_Attr,
                                      SourceLocation Loc) {
+    unsigned Level = llvm::StringSwitch<unsigned>(_Attr->getLevel()->getName())
+        .Case("always", 0)  // Assert is emitted even if -build-level=off
+        .Case("default", 1)
+        .Case("audit", 2)
+        .Default(~0U);
+    if (CGM.getCodeGenOpts().BuildLevel < Level)
+      return;
+
     CallExpr *CE = CGM.SynthesizeCallToFunctionDecl(&getContext(),
            const_cast<FunctionDecl *>(CGM.GetRuntimeFunctionDecl(getContext(),
                                       "abort")), {});

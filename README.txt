@@ -24,3 +24,8 @@ $ git clone https://gitlab.arcos.inf.uc3m.es:8380/jalopezg/llvm-clang.git
 $ mkdir -p llvm-clang/build/ && cd llvm-clang/build/
 $ cmake -G "Unix Makefiles" -DLLVM_USE_LINKER=gold -DBUILD_SHARED_LIBS=ON -DLLVM_USE_SPLIT_DWARF=ON -DLLVM_OPTIMIZED_TABLEGEN=ON ../
 $ make -j8
+
+Usage
+=====
+
+$ clang++ -std=c++11 -build-level=audit ...
