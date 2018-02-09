@@ -561,7 +561,7 @@ void CodeGenFunction::EmitAssertAttr(const AssertAttr *_Attr,
         .Case("default", 1)
         .Case("audit", 2)
         .Default(~0U);
-    if (CGM.getCodeGenOpts().BuildLevel < Level)
+    if (CGM.getLangOpts().BuildLevel < Level)
       return;
 
     CallExpr *CE = CGM.SynthesizeCallToFunctionDecl(&getContext(),

@@ -3289,7 +3289,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   const auto *D = cast<FunctionDecl>(GD.getDecl());
 
   // TODO: handle EnsuresAttr code generation
-  if (D->hasAttr<ExpectsAttr>()) {
+  if (getLangOpts().BuildLevel > 0 && D->hasAttr<ExpectsAttr>()) {
     IdentifierInfo *II = &getContext().Idents.get(D->getNameAsString()
                              + CXX__UNCHECKEDFN);
     FunctionDecl *FD, *_D = const_cast<FunctionDecl *>(D);

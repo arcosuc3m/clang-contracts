@@ -439,19 +439,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   bool Success = true;
   llvm::Triple Triple = llvm::Triple(TargetOpts.Triple);
 
-  // Handle -build-level= option.
-  if (Arg *A = Args.getLastArg(OPT_build_level_EQ)) {
-    unsigned Val = llvm::StringSwitch<unsigned>(A->getValue())
-        .Case("off", 0)
-        .Case("default", 1)
-        .Case("audit", 2)
-        .Default(~0U);
-    if (Val == ~0U)
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << A->getValue();
-    else
-      Opts.BuildLevel = Val;
-  }
-
   unsigned OptimizationLevel = getOptimizationLevel(Args, IK, Diags);
   // TODO: This could be done in Driver
   unsigned MaxOptLevel = 3;
@@ -1938,6 +1925,19 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
           << A->getAsString(Args) << GetInputKindName(IK);
       }
     }
+  }
+
+  // Handle -build-level= option.
+  if (Arg *A = Args.getLastArg(OPT_build_level_EQ)) {
+    unsigned Val = llvm::StringSwitch<unsigned>(A->getValue())
+        .Case("off", 0)
+        .Case("default", 1)
+        .Case("audit", 2)
+        .Default(~0U);
+    if (Val == ~0U)
+      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << A->getValue();
+    else
+      Opts.BuildLevel = Val;
   }
 
   // -cl-std only applies for OpenCL language standards.
