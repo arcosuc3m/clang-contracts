@@ -60,7 +60,15 @@ static Attr *handleAssertAttr(Sema &S, Stmt *St, const AttributeList &A,
     return nullptr;
   }
 
-  AssertAttr Attr(A.getRange(), S.Context, A.getArgAsIdent(0)->Ident, A.getArgAsExpr(1),
+  Expr *E = A.getArgAsExpr(1);
+  if (!E->isTypeDependent()) {
+    ExprResult Converted = S.PerformContextuallyConvertToBool(E);
+    if (Converted.isInvalid())
+      return nullptr;
+    E = Converted.get();
+  }
+
+  AssertAttr Attr(A.getRange(), S.Context, A.getArgAsIdent(0)->Ident, E,
                        A.getAttributeSpellingListIndex());
   if (!isa<NullStmt>(St)) {
     S.Diag(A.getRange().getBegin(), diag::err_fallthrough_attr_wrong_target)

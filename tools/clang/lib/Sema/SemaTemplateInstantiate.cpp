@@ -1237,7 +1237,8 @@ TemplateInstantiator::TransformAssertAttr(const AssertAttr *A) {
     return A;
 
   return AssertAttr::CreateImplicit(
-      getSema().Context, A->getLevel(), TransformedExpr, A->getRange());
+      getSema().Context, A->getLevel(),
+      getSema().PerformContextuallyConvertToBool(TransformedExpr).get(), A->getRange());
 }
 
 ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
