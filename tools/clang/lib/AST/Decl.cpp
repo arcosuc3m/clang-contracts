@@ -2784,6 +2784,19 @@ FunctionDecl::setPreviousDeclaration(FunctionDecl *PrevDecl) {
 
 FunctionDecl *FunctionDecl::getCanonicalDecl() { return getFirstDecl(); }
 
+VarDecl *FunctionDecl::GetInternalReturnVarDecl() {
+  if (________ret________)
+    return ________ret________;
+
+  IdentifierInfo *II = &getASTContext().Idents.get("________ret________");
+  for (auto i : noload_decls()) {
+    if (VarDecl *VD = dyn_cast<VarDecl>(i))
+      if (VD->getDeclName() == II)
+        return (________ret________ = VD);
+  }
+  return nullptr;
+}
+
 /// \brief Returns a value indicating whether this function
 /// corresponds to a builtin function.
 ///

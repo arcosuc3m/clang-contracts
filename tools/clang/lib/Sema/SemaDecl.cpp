@@ -2382,6 +2382,7 @@ namespace {
   // Given two FunctionDecl and an expression, transform the expression so that
   // any reference to  an argument on the first FunctionDecl is translated to a
   // reference to the corresponding name on the second FunctionDecl.
+  // Note that this also rewrites references to the '________ret________' internal declaration.
   // 
   // Used to merge inherited 'expects' or 'ensures' attributes.
   class MergeContractAttrTransform : public TreeTransform<MergeContractAttrTransform> {
@@ -2395,6 +2396,13 @@ namespace {
         TransformedDN.insert(std::make_pair(OD->getParamDecl(i)->getDeclName(),
                                             D->getParamDecl(i)->getDeclName()));
       }
+
+      // also rewrite any reference to '________ret________'
+      NamedDecl *OD_ret = OD->GetInternalReturnVarDecl(),
+                *D_ret = D->GetInternalReturnVarDecl();
+      TransformedLocalDecls.insert(std::make_pair(OD_ret, D_ret));
+      TransformedDN.insert(std::make_pair(OD_ret->getDeclName(),
+                                          D_ret->getDeclName()));
     }
 
     DeclarationNameInfo TransformDeclarationNameInfo(const DeclarationNameInfo &NI) {
@@ -2511,7 +2519,6 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D, Decl *Old,
     NewAttr = S.mergeUuidAttr(D, UA->getRange(), AttrSpellingListIndex,
                               UA->getGuid());
   else if (const auto *A = dyn_cast<ExpectsAttr>(Attr)) {
-    // TODO: fix EnsuresAttr expression
     if (A->getArgDependent()) {
       NewAttr = new (S.Context) ExpectsAttr(A->getLocation(), S.Context, A->getLevel(),
                   MergeContractAttrTransform(S, cast<FunctionDecl>(Old),
@@ -2520,6 +2527,11 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D, Decl *Old,
     } else {
       NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
     }
+  } else if (const auto *A = dyn_cast<EnsuresAttr>(Attr)) {
+      NewAttr = new (S.Context) EnsuresAttr(A->getLocation(), S.Context, A->getLevel(),
+                  MergeContractAttrTransform(S, cast<FunctionDecl>(Old),
+                               cast<FunctionDecl>(D)).TransformExpr(A->getCond()).get(),
+                  A->getRet(), A->getArgDependent(), A->getParent(), A->getSpellingListIndex());
   } else if (Attr->duplicatesAllowed() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
 
@@ -2708,6 +2720,15 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
   // Ensure that any moving of objects within the allocated map is done before
   // we process them.
   if (!foundAny) New->setAttrs(AttrVec());
+
+  // expects/ensures attributes require that '________ret________' exists.
+  if ((Old->hasAttr<ExpectsAttr>() || Old->hasAttr<EnsuresAttr>())
+      && !cast<FunctionDecl>(New)->GetInternalReturnVarDecl()) {
+    auto ________ret________ = CXXContracts_MakeInternalReturnVarDecl(
+                                    PP.getIdentifierInfo("________ret________"));
+    ________ret________->setDeclContext(cast<DeclContext>(New));
+    cast<DeclContext>(New)->addDecl(________ret________);
+  }
 
   for (auto *I : Old->specific_attrs<InheritableAttr>()) {
     // Ignore deprecated/unavailable/availability attributes if requested.

@@ -1668,6 +1668,7 @@ private:
   unsigned IsLateTemplateParsed : 1;
   unsigned IsConstexpr : 1;
   unsigned InstantiationIsPending:1;
+  VarDecl *________ret________;
 
   /// \brief Indicates if the function uses __try.
   unsigned UsesSEHTry : 1;
@@ -1820,6 +1821,11 @@ public:
 
   void getNameForDiagnostic(raw_ostream &OS, const PrintingPolicy &Policy,
                             bool Qualified) const override;
+
+  /// \brief Returns and caches the local ________ret________ declaration that
+  /// is used to temporary store the return value of a checked function, i.e.
+  /// one that includes expects or ensures attributes.
+  VarDecl *GetInternalReturnVarDecl();
 
   void setRangeEnd(SourceLocation E) { EndRangeLoc = E; }
 
