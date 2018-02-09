@@ -3830,6 +3830,19 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   }
 }
 
+VarDecl *Parser::CXXContracts_GetInternalReturnVarDecl(bool Make) {
+  auto VD = cast_or_null<VarDecl>(Actions.LookupSingleName(getCurScope(),
+                                                  Ident_________ret________,
+                                                  SourceLocation(),
+                                                  Sema::LookupOrdinaryName));
+  if (!VD && Make) {
+    VD = Actions.CXXContracts_MakeInternalReturnVarDecl(Ident_________ret________);
+    Actions.PushOnScopeChains(VD, getCurScope(), /*AddToContext=*/false);
+  }
+  return VD;
+}
+
+/// ParseContractAttrArgs - Parse arguments of a contract-attribute-specifier
 unsigned Parser::ParseContractAttrArgs(IdentifierInfo *AttrName,
                            SourceLocation AttrNameLoc,
                            ParsedAttributes &Attrs, SourceLocation *EndLoc) {
@@ -3837,13 +3850,18 @@ unsigned Parser::ParseContractAttrArgs(IdentifierInfo *AttrName,
      AttributeList::getKind(AttrName, nullptr, AttributeList::AS_CXX11);
   ArgsVector ArgExprs;
   ExprResult ArgExpr(static_cast<Expr*>(nullptr));
+  VarDecl *________ret________ = nullptr;
 
   if (!Ident_axiom) {
     Ident_axiom = PP.getIdentifierInfo("axiom");
     Ident_default = PP.getIdentifierInfo("default");
     Ident_audit = PP.getIdentifierInfo("audit");
     Ident_always = PP.getIdentifierInfo("always");
+    Ident_________ret________ = PP.getIdentifierInfo("________ret________");
   }
+
+  if (AttrKind != AttributeList::AT_Assert)
+    ________ret________ = CXXContracts_GetInternalReturnVarDecl(true);
 
   // parse contract-level and identifier used for return value (expects only)
   IdentifierInfo *II1 = Ident_default, *II2 = nullptr;
@@ -3867,6 +3885,10 @@ unsigned Parser::ParseContractAttrArgs(IdentifierInfo *AttrName,
       goto out;
     }
   }
+
+  // make alias for II2 pointing to the internal ________ret________ declaration
+  if (II2)
+    DeclarationName(II2).setFETokenInfo(________ret________);
 
   // expect ":" and parse expression
   if (ExpectAndConsume(tok::colon))
@@ -3969,6 +3991,17 @@ bool Parser::ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
   return true;
 }
 
+/// TryParseContractAttributeSpecifier - Parse a contract-attribute-specifier
+///
+/// [D0542R2] contract-attribute-specifier:
+///         '[' '[' 'expects' contract-level[opt] ':' conditional-expression ']' ']'
+///         '[' '[' 'ensures' contract-level[opt] ':' conditional-expression ']' ']'
+///         '[' '[' 'assert' contract-level[opt] ':' conditional-expression ']' ']'
+/// [D0542R2] contract-level:
+///         'always'
+///         'default'
+///         'audit'
+///         'axiom'
 bool Parser::TryParseContractAttributeSpecifier(ParsedAttributes &attrs,
                                           SourceLocation *endLoc) {
   if (!Tok.is(tok::identifier) || !(Tok.getIdentifierInfo()->getName() == "expects"

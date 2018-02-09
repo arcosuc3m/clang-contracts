@@ -1343,6 +1343,10 @@ struct DeclaratorChunk {
     /// type specified.
     UnionParsedType TrailingReturnType;
 
+    /// \brief C++ contracts (D0542R2): Internal variable used to temporary
+    /// store the return value in a checked function
+    NamedDecl *________ret________;
+
     /// \brief Reset the parameter list to having zero parameters.
     ///
     /// This is used in various places for error recovery.
@@ -1605,7 +1609,8 @@ struct DeclaratorChunk {
                                      SourceLocation LocalRangeEnd,
                                      Declarator &TheDeclarator,
                                      TypeResult TrailingReturnType =
-                                                    TypeResult());
+                                                    TypeResult(),
+                                     NamedDecl *________ret________ = nullptr);
 
   /// \brief Return a DeclaratorChunk for a block.
   static DeclaratorChunk getBlockPointer(unsigned TypeQuals,

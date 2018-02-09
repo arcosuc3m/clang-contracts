@@ -2440,6 +2440,7 @@ public:
   CommonAttr *mergeCommonAttr(Decl *D, SourceRange Range, IdentifierInfo *Ident,
                               unsigned AttrSpellingListIndex);
 
+  VarDecl *CXXContracts_MakeInternalReturnVarDecl(IdentifierInfo *II);
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);
   void MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,

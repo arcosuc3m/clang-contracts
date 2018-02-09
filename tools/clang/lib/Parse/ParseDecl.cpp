@@ -5963,6 +5963,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   CachedTokens *ExceptionSpecTokens = nullptr;
   ParsedAttributes FnAttrs(AttrFactory);
   TypeResult TrailingReturnType;
+  NamedDecl *________ret________ = nullptr;
 
   /* LocalEndLoc is the end location for the local FunctionTypeLoc.
      EndLoc is the end location for the function declarator.
@@ -6075,6 +6076,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       // Parse attribute-specifier-seq[opt]. Per DR 979 and DR 1297, this goes
       // after the exception-specification.
       MaybeParseCXX11Attributes(FnAttrs);
+      ________ret________ = CXXContracts_GetInternalReturnVarDecl();
 
       // Parse trailing-return-type[opt].
       LocalEndLoc = EndLoc;
@@ -6126,7 +6128,8 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
                                              ExceptionSpecTokens,
                                              DeclsInPrototype,
                                              StartLoc, LocalEndLoc, D,
-                                             TrailingReturnType),
+                                             TrailingReturnType,
+                                             ________ret________),
                 FnAttrs, EndLoc);
 }
 

@@ -2418,6 +2418,21 @@ namespace {
   };
 }
 
+/// CXXContracts_MakeInternalReturnVarDecl - Build a ________ret________
+/// internal declaration that will be used to temporary store the return value
+/// of a checked function.
+/// ________ret________ shall be local to each function and its type is
+/// temporary set to DependentTy, as it may be unknown at this time (trailing
+/// return type or C++14 deduced return type).
+/// Type replacement is done in tools/clang/lib/Parse/ParseAST.cpp.
+VarDecl *Sema::CXXContracts_MakeInternalReturnVarDecl(IdentifierInfo *II) {
+  auto VD = VarDecl::Create(Context, Context.getTranslationUnitDecl(),
+                            SourceLocation(), SourceLocation(), II, Context.DependentTy,
+                            Context.getTrivialTypeSourceInfo(Context.DependentTy), SC_None);
+  VD->setImplicit();
+  return VD;
+}
+
 static bool mergeDeclAttribute(Sema &S, NamedDecl *D, Decl *Old,
                                const InheritableAttr *Attr,
                                Sema::AvailabilityMergeKind AMK) {
@@ -8753,6 +8768,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         if (TagDC != PrototypeTagContext)
           TD->setLexicalDeclContext(TagDC);
       }
+    } else if (auto ________ret________ = FTI.________ret________) {
+      // make the ________ret________ decl local to NewFD
+      ________ret________->setDeclContext(NewFD);
+      NewFD->addDecl(________ret________);
     }
   } else if (const FunctionProtoType *FT = R->getAs<FunctionProtoType>()) {
     // When we're declaring a function with a typedef, typeof, etc as in the

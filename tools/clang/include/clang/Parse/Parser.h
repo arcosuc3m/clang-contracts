@@ -126,6 +126,7 @@ class Parser : public CodeCompletionHandler {
   IdentifierInfo *Ident_default;
   IdentifierInfo *Ident_audit;
   IdentifierInfo *Ident_always;
+  IdentifierInfo *Ident_________ret________;
 
   /// \brief Identifier for "introduced".
   IdentifierInfo *Ident_introduced;
@@ -2292,6 +2293,7 @@ private:
   unsigned
   ParseContractAttrArgs(IdentifierInfo *AttrName, SourceLocation AttrNameLoc,
                         ParsedAttributes &Attrs, SourceLocation *EndLoc);
+  VarDecl *CXXContracts_GetInternalReturnVarDecl(bool Make = false);
   /// \brief Parses a C++-style attribute argument list. Returns true if this
   /// results in adding an attribute to the ParsedAttributes list.
   bool ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
