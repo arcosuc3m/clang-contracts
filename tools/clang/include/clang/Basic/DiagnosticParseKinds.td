@@ -828,7 +828,7 @@ def ext_constexpr_on_lambda_cxx17 : ExtWarn<
 
 // Contract attributes
 def err_expected_contract_level : Error<
-  "expected contract-level after '%0' attribute">;
+  "unknown contract-level after '%0' attribute">;
 
 // Availability attribute
 def err_expected_version : Error<
