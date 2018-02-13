@@ -1011,6 +1011,7 @@ def Expects : InheritableAttr {
               ExprArgument<"Cond">,
               BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
               NamedArgument<"Parent", 0, /*fake*/ 1>];
+  let AdditionalMembers = [{ void setCond(Expr *E) { cond = E; } }];
   let DuplicatesAllowedWhileMerging = 1;
   let LateParsed = 1;
   let TemplateDependent = 1;
@@ -1025,6 +1026,7 @@ def Ensures : InheritableAttr {
               IdentifierArgument<"Ret">,
               BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
               NamedArgument<"Parent", 0, /*fake*/ 1>];
+  let AdditionalMembers = [{ void setCond(Expr *E) { cond = E; } }];
   let DuplicatesAllowedWhileMerging = 1;
   let LateParsed = 1;
   let TemplateDependent = 1;
