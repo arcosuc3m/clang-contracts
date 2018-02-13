@@ -3866,6 +3866,7 @@ unsigned Parser::ParseContractAttrArgs(IdentifierInfo *AttrName,
   // parse contract-level and identifier used for return value (expects only)
   IdentifierInfo *II1 = Ident_default, *II2 = nullptr;
   SourceLocation Loc1, Loc2;
+  ParseScope RAIIScope(this, Scope::DeclScope|Scope::FunctionPrototypeScope);
   if (Tok.isOneOf(tok::identifier, tok::kw_default)) {
     II1 = Tok.getIdentifierInfo();
     Loc1 = ConsumeToken();
