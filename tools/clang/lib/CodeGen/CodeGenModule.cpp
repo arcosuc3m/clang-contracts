@@ -3251,35 +3251,53 @@ CallExpr *CodeGenModule::SynthesizeCallToFunctionDecl(ASTContext *Context,
 }
 
 /// SynthesizeCheckedFunctionBody - generates the body of a function that checks
-/// the preconditions (expects) and calls the '__unchecked' function
+/// the preconditions(expects)/postconditions(ensures) and calls the '__unchecked' function
 static Stmt *
-SynthesizeCheckedFunctionBody(CodeGenModule *CGM, FunctionDecl *D, const AttrVec &Attrs) {
+SynthesizeCheckedFunctionBody(CodeGenModule *CGM, FunctionDecl *D, FunctionDecl *D_unchk) {
   ASTContext &Context = CGM->getContext();
   SourceLocation ISL;
-  SmallVector<Attr*, 8> AS_Attrs;
+  SmallVector<Attr*, 8> AS_expects, AS_ensures;
+  VarDecl *________ret________ = D_unchk->GetInternalReturnVarDecl();
 
-  // translate 'expects' attributes into 'assert'
-  for (const auto *Attr : Attrs) {
-    if (const ExpectsAttr *_Attr = dyn_cast<ExpectsAttr>(Attr))
-      AS_Attrs.push_back(AssertAttr::CreateImplicit(Context, _Attr->getLevel(), _Attr->getCond(),
+  // translate 'expects'/'ensures' attributes into 'assert'
+  for (const auto *Attr : D_unchk->getAttrs()) {
+    if (const ExpectsAttr *_Attr = dyn_cast<ExpectsAttr>(Attr)) {
+      AS_expects.push_back(AssertAttr::CreateImplicit(Context, _Attr->getLevel(), _Attr->getCond(),
                                                     ISL));
+    } else if (const EnsuresAttr *_Attr = dyn_cast<EnsuresAttr>(Attr)) {
+      AS_ensures.push_back(AssertAttr::CreateImplicit(Context, _Attr->getLevel(), _Attr->getCond(),
+                                                    ISL));
+    }
   }
 
   // build the parameter list for function call
   SmallVector<Expr*, 8> Args;
   for (auto &P : D->parameters()) {
     DeclRefExpr *DRE = new (Context) DeclRefExpr(P, false, P->getType(),
-                                                 VK_LValue, SourceLocation());
+                                                 VK_LValue, ISL);
     Args.push_back(ImplicitCastExpr::Create(Context, P->getType(),
                              CK_LValueToRValue, DRE, nullptr, VK_RValue));
   }
   CallExpr *CE = CGM->SynthesizeCallToFunctionDecl(&Context, D, Args);
-  ReturnStmt *RS = new (Context) ReturnStmt(ISL, CE, nullptr);
+  ________ret________->setInit(CE);
+  ________ret________->setInitStyle(VarDecl::CInit);
 
-  // return the body: precondition checks + call __unchecked function (inlined)
+  // build the return statement
+  DeclRefExpr *DRE = new (Context) DeclRefExpr(________ret________, false,
+                                               ________ret________->getType(),
+                                               VK_LValue, ISL);
+  ReturnStmt *RS = new (Context)
+                   ReturnStmt(ISL, ImplicitCastExpr::Create(Context,
+                                             ________ret________->getType(),
+                                             CK_LValueToRValue, DRE, nullptr, VK_RValue),
+                              nullptr);
+
+
+  // return the body: precondition checks + call __unchk function (inlined) + postcondition checks
   return new (Context) CompoundStmt(Context, ArrayRef<Stmt *>{
-                                       AttributedStmt::Create(Context, ISL, AS_Attrs,
-                                       new (Context) NullStmt(ISL)),
+                                       AttributedStmt::Create(Context, ISL, AS_expects, new (Context) NullStmt(ISL)),
+                                       new (Context) DeclStmt(DeclGroupRef(________ret________), ISL, ISL),
+                                       AttributedStmt::Create(Context, ISL, AS_ensures, new (Context) NullStmt(ISL)),
                                        RS,
                              }, ISL, ISL);
 }
@@ -3289,7 +3307,8 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   const auto *D = cast<FunctionDecl>(GD.getDecl());
 
   // TODO: handle EnsuresAttr code generation
-  if (getLangOpts().BuildLevel > 0 && D->hasAttr<ExpectsAttr>()) {
+  if (getLangOpts().BuildLevel > 0 // off
+      && (D->hasAttr<ExpectsAttr>() || D->hasAttr<EnsuresAttr>())) {
     IdentifierInfo *II = &getContext().Idents.get(D->getNameAsString()
                              + CXX__UNCHECKEDFN);
     FunctionDecl *FD, *_D = const_cast<FunctionDecl *>(D);
@@ -3318,8 +3337,9 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
     EmitGlobal(FD);
 
     // Replaces the body of the original (not yet emitted) function
-    _D->setBody(SynthesizeCheckedFunctionBody(this, FD, D->getAttrs()));
+    _D->setBody(SynthesizeCheckedFunctionBody(this, FD, _D));
     _D->dropAttr<ExpectsAttr>();
+    _D->dropAttr<EnsuresAttr>();
   }
 
   // Compute the function info and LLVM type.

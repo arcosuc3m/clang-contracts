@@ -1019,9 +1019,6 @@ public:
 }
 
 static void handle_Expects_Ensures_Attr(Sema &S, Decl *D, const AttributeList &Attr) {
-  if (Attr.getKind() == AttributeList::AT_Ensures)
-    S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) << Attr.getName();
-
   IdentifierInfo *Level = Attr.getArgAsIdent(0)->Ident;
   Expr *Cond = Attr.getArgAsExpr(1);
 
