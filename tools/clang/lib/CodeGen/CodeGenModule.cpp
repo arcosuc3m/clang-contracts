@@ -3294,12 +3294,16 @@ SynthesizeCheckedFunctionBody(CodeGenModule *CGM, FunctionDecl *D, FunctionDecl 
 
 
   // return the body: precondition checks + call __unchk function (inlined) + postcondition checks
-  return new (Context) CompoundStmt(Context, ArrayRef<Stmt *>{
-                                       AttributedStmt::Create(Context, ISL, AS_expects, new (Context) NullStmt(ISL)),
-                                       new (Context) DeclStmt(DeclGroupRef(________ret________), ISL, ISL),
-                                       AttributedStmt::Create(Context, ISL, AS_ensures, new (Context) NullStmt(ISL)),
-                                       RS,
-                             }, ISL, ISL);
+  SmallVector<Stmt *, 4> S;
+  if (AS_expects.size())
+    S.push_back(AttributedStmt::Create(Context, ISL, AS_expects,
+                                       new (Context) NullStmt(ISL)));
+  S.push_back(new (Context) DeclStmt(DeclGroupRef(________ret________), ISL, ISL));
+  if (AS_ensures.size())
+    S.push_back(AttributedStmt::Create(Context, ISL, AS_ensures,
+                                       new (Context) NullStmt(ISL)));
+  S.push_back(RS);
+  return new (Context) CompoundStmt(Context, S, ISL, ISL);
 }
 
 void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,

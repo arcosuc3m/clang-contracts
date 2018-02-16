@@ -29,3 +29,18 @@ Usage
 =====
 
 $ clang++ -std=c++11 -build-level=audit ...
+
+Known problems
+==============
+- Since `ensures' support was added, function templates are broken for
+  functions that have expects/ensures attributes
+- expects/ensures not supported in static member functions, constructors or
+  destructors
+
+To do
+=====
+- Emit diagnostic `preconditions/postconditions are not supported on lambda
+  expressions'
+- Handle contract inheritance for redeclarations as specified in D0542R2 (2017-11-07)
+- Class inheritance?, see D0542R2 specification
+- Call user-defined violation handler, continuation mode?
