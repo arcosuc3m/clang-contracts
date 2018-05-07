@@ -2933,6 +2933,7 @@ void EmitClangAttrTemplateInstantiateHelper(const std::vector<Record *> &Attrs,
 
     for (auto const &ai : Args)
       ai->writeTemplateInstantiation(OS);
+    OS << R.getValueAsString("AdditionalInstantiationCode");
 
     OS << "      return new (C) " << R.getName() << "Attr(A->getLocation(), C";
     for (auto const &ai : Args) {

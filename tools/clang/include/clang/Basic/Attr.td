@@ -398,6 +398,8 @@ class Attr {
   bit Clone = 1;
   // Set to true for attributes which must be instantiated within templates
   bit TemplateDependent = 0;
+  // Any additional text that should be included verbatim in the generated instantiateTemplateAttribute() function.
+  code AdditionalInstantiationCode = [{}];
   // Set to true for attributes that have a corresponding AST node.
   bit ASTNode = 1;
   // Set to true for attributes which have handler in Sema.
@@ -1015,6 +1017,7 @@ def Expects : InheritableAttr {
   let DuplicatesAllowedWhileMerging = 1;
   let LateParsed = 1;
   let TemplateDependent = 1;
+  let AdditionalInstantiationCode = [{ if (!tempInstCond->isTypeDependent()) { ExprResult ER = S.PerformContextuallyConvertToBool(tempInstCond); if (ER.isUsable()) tempInstCond = ER.get(); } }];
   let Documentation = [Undocumented];
 }
 
@@ -1030,6 +1033,7 @@ def Ensures : InheritableAttr {
   let DuplicatesAllowedWhileMerging = 1;
   let LateParsed = 1;
   let TemplateDependent = 1;
+  let AdditionalInstantiationCode = [{ if (!tempInstCond->isTypeDependent()) { ExprResult ER = S.PerformContextuallyConvertToBool(tempInstCond); if (ER.isUsable()) tempInstCond = ER.get(); } }];
   let Documentation = [Undocumented];
 }
 
