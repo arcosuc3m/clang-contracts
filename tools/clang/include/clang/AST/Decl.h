@@ -1763,7 +1763,7 @@ protected:
         IsDeleted(false), IsTrivial(false), IsDefaulted(false),
         IsExplicitlyDefaulted(false), HasImplicitReturnZero(false),
         IsLateTemplateParsed(false), IsConstexpr(isConstexprSpecified),
-        InstantiationIsPending(false),
+        InstantiationIsPending(false), ________ret________(nullptr),
         UsesSEHTry(false), HasSkippedBody(false), WillHaveBody(false),
         EndRangeLoc(NameInfo.getEndLoc()), TemplateOrSpecialization(),
         DNLoc(NameInfo.getInfo()) {}

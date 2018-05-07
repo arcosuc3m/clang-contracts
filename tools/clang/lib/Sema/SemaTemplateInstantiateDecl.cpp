@@ -19,6 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/PrettyDeclStackTrace.h"
@@ -3697,6 +3698,17 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
   const FunctionDecl *Definition = Tmpl;
   Tmpl->isDefined(Definition);
 
+  // instantiate the internal ________ret________ local var
+  if (auto Tmpl________ret________ = Tmpl->GetInternalReturnVarDecl()) {
+    auto ________ret________ = SemaRef.CXXContracts_MakeInternalReturnVarDecl(
+                                                SemaRef.PP.getIdentifierInfo("________ret________"));
+    ________ret________->setType(New->getReturnType());
+    ________ret________->setDeclContext(New);
+    New->addDecl(________ret________);
+    SemaRef.CurrentInstantiationScope->InstantiatedLocal(Tmpl________ret________, ________ret________);
+  }
+
+  // expects/ensures attributes require additional instantiation code; see include/clang/Basic/Attr.td
   SemaRef.InstantiateAttrs(TemplateArgs, Definition, New,
                            LateAttrs, StartingScope);
 
