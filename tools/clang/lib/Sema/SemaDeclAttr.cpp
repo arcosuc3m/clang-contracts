@@ -1025,6 +1025,7 @@ static void handle_Expects_Ensures_Attr(Sema &S, Decl *D, const AttributeList &A
 
   // Convert expression to bool if possible; in the presence of dependent types, it will be handled later
   if (Attr.getKind() == AttributeList::AT_Ensures && !cast<FunctionDecl>(D)->getReturnType()->isDependentType()) {
+    Sema::ContextRAII SC{S, cast<FunctionDecl>(D)};
     if ((Converted = S.RebuildExpr(Cond)).isUsable())
       Cond = Converted.get();
   }
