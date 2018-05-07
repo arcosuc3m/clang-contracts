@@ -2014,6 +2014,7 @@ public:
   bool canSkipFunctionBody(Decl *D);
 
   void computeNRVO(Stmt *Body, sema::FunctionScopeInfo *Scope);
+  void adjustDeducedFunctionResultType(FunctionDecl *FD, QualType ResultType);
   Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body);
   Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body, bool IsInstantiation);
   Decl *ActOnSkippedFunctionBody(Decl *Decl);
@@ -3958,6 +3959,7 @@ public:
   void DiscardCleanupsInEvaluationContext();
 
   ExprResult TransformToPotentiallyEvaluated(Expr *E);
+  ExprResult RebuildExpr(Expr *E);
   ExprResult HandleExprEvaluationContextForTypeof(Expr *E);
 
   ExprResult ActOnConstantExpression(ExprResult Res);

@@ -32,8 +32,6 @@ $ clang++ -std=c++11 -build-level=audit ...
 
 Known problems
 ==============
-- Since `ensures' support was added, function templates are broken for
-  functions that have expects/ensures attributes
 - expects/ensures not supported in static member functions, constructors or
   destructors
 

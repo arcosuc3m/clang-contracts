@@ -1001,7 +1001,7 @@ public:
   }
 
   bool VisitCXXThisExpr(CXXThisExpr *E) {
-    assert(E->getType()->getPointeeCXXRecordDecl() == ClassType &&
+    assert((E->getType()->isDependentType() || E->getType()->getPointeeCXXRecordDecl() == ClassType) &&
            "`this` doesn't refer to the enclosing class?");
     Result = true;
     return false;
@@ -1021,6 +1021,18 @@ public:
 static void handle_Expects_Ensures_Attr(Sema &S, Decl *D, const AttributeList &Attr) {
   IdentifierInfo *Level = Attr.getArgAsIdent(0)->Ident;
   Expr *Cond = Attr.getArgAsExpr(1);
+  ExprResult Converted;
+
+  // Convert expression to bool if possible; in the presence of dependent types, it will be handled later
+  if (Attr.getKind() == AttributeList::AT_Ensures && !cast<FunctionDecl>(D)->getReturnType()->isDependentType()) {
+    if ((Converted = S.RebuildExpr(Cond)).isUsable())
+      Cond = Converted.get();
+  }
+  if (!Cond->isTypeDependent()) {
+    if ((Converted = S.PerformContextuallyConvertToBool(Cond)).isInvalid())
+      return;
+    Cond = Converted.get();
+  }
 
   // Check if the expression is dependent on function arguments
   bool ArgDependent = false;

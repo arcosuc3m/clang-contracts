@@ -3953,7 +3953,7 @@ SubstAutoWithinFunctionReturnType(FunctionDecl *F,
   assert(AutoResultType->getContainedAutoType());
   QualType DeducedResultType = S.SubstAutoType(AutoResultType,
                                                TypeToReplaceAutoWith);
-  S.Context.adjustDeducedFunctionResultType(F, DeducedResultType);
+  S.adjustDeducedFunctionResultType(F, DeducedResultType);
 }
 
 /// \brief Given a specialized conversion operator of a generic lambda

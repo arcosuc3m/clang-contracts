@@ -2423,6 +2423,15 @@ namespace {
                                    NameInfo, VD->getType(), VK_LValue, nullptr,
                                    TemplateArgs));
     }
+
+    // rewrite ImplicitCastExpr created by PerformContextuallyConvertToBool()
+    ExprResult TransformImplicitCastExpr(ImplicitCastExpr *E) {
+      auto ER = getDerived().TransformExpr(E->getSubExpr());
+      return ER.isUsable() ? ExprResult(ImplicitCastExpr::Create(
+                                   SemaRef.getASTContext(), E->getType(), E->getCastKind(),
+                                   ER.get(), nullptr, E->getValueKind()))
+                           : ER;
+    }
   };
 }
 
@@ -2438,6 +2447,8 @@ VarDecl *Sema::CXXContracts_MakeInternalReturnVarDecl(IdentifierInfo *II) {
                             SourceLocation(), SourceLocation(), II, Context.DependentTy,
                             Context.getTrivialTypeSourceInfo(Context.DependentTy), SC_None);
   VD->setImplicit();
+  VD->setNRVOVariable(true);
+  VD->setIsUsed();
   return VD;
 }
 
@@ -2728,6 +2739,10 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
                                     PP.getIdentifierInfo("________ret________"));
     ________ret________->setDeclContext(cast<DeclContext>(New));
     cast<DeclContext>(New)->addDecl(________ret________);
+
+    auto RetTy = cast<FunctionDecl>(Old)->getReturnType(); 
+    if (!RetTy->isUndeducedType()) // + set type (if known)
+      ________ret________->setType(RetTy);
   }
 
   for (auto *I : Old->specific_attrs<InheritableAttr>()) {
@@ -8793,6 +8808,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // make the ________ret________ decl local to NewFD
       ________ret________->setDeclContext(NewFD);
       NewFD->addDecl(________ret________);
+      if (!NewFD->getReturnType()->isUndeducedType()) // + set type (if known)
+        cast<VarDecl>(________ret________)->setType(NewFD->getReturnType());
     }
   } else if (const FunctionProtoType *FT = R->getAs<FunctionProtoType>()) {
     // When we're declaring a function with a typedef, typeof, etc as in the
@@ -12385,6 +12402,24 @@ Decl *Sema::ActOnSkippedFunctionBody(Decl *Decl) {
   return Decl;
 }
 
+void Sema::adjustDeducedFunctionResultType(FunctionDecl *FD, QualType ResultType) {
+  Context.adjustDeducedFunctionResultType(FD, ResultType);
+
+  // ________ret________ type has changed; rebuild `ensures' attribute expressions
+  if (auto ________ret________ = FD->GetInternalReturnVarDecl()) {
+    ________ret________->setType(ResultType);
+
+    for (auto Attr : FD->specific_attrs<EnsuresAttr>()) {
+      ExprResult ER;
+      if ((ER = RebuildExpr(Attr->getCond())).isInvalid())
+        continue;
+
+      if (!ER.get()->isTypeDependent()) ER = PerformContextuallyConvertToBool(ER.get());
+      if (ER.isUsable()) Attr->setCond(ER.get());
+    }
+  }
+}
+
 Decl *Sema::ActOnFinishFunctionBody(Decl *D, Stmt *BodyArg) {
   return ActOnFinishFunctionBody(D, BodyArg, false);
 }
@@ -12416,7 +12451,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         } else {
           // Substitute 'void' for the 'auto' in the type.
           TypeLoc ResultType = getReturnTypeLoc(FD);
-          Context.adjustDeducedFunctionResultType(
+          adjustDeducedFunctionResultType(
               FD, SubstAutoType(ResultType.getType(), Context.VoidTy));
         }
       }

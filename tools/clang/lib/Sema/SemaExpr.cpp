@@ -13675,6 +13675,13 @@ namespace {
       return E;
     }
   };
+
+  // TreeTransform-derived class used in Sema::RebuildExpr()
+  class ExprRebuild : public TreeTransform<ExprRebuild> {
+  public:
+    ExprRebuild(Sema &S) : TreeTransform<ExprRebuild>(S) {}
+    bool AlwaysRebuild() { return true; }
+  };
 }
 
 ExprResult Sema::TransformToPotentiallyEvaluated(Expr *E) {
@@ -13686,6 +13693,8 @@ ExprResult Sema::TransformToPotentiallyEvaluated(Expr *E) {
     return E;
   return TransformToPE(*this).TransformExpr(E);
 }
+
+ExprResult Sema::RebuildExpr(Expr *E) { return ExprRebuild(*this).TransformExpr(E); }
 
 void
 Sema::PushExpressionEvaluationContext(ExpressionEvaluationContext NewContext,

@@ -3301,7 +3301,7 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
     }
   } else if (!FD->isInvalidDecl()) {
     // Update all declarations of the function to have the deduced return type.
-    Context.adjustDeducedFunctionResultType(FD, Deduced);
+    adjustDeducedFunctionResultType(FD, Deduced);
   }
 
   return false;
