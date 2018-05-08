@@ -1240,10 +1240,14 @@ SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D, FunctionDecl 
   // build the parameter list for function call
   SmallVector<Expr*, 8> Args;
   for (auto &P : D->parameters()) {
-    DeclRefExpr *DRE = new (Context) DeclRefExpr(P, false, P->getType(),
-                                                 VK_LValue, ISL);
-    Args.push_back(ImplicitCastExpr::Create(Context, P->getType(),
-                             CK_LValueToRValue, DRE, nullptr, VK_RValue));
+    QualType T = P->getType();
+    QualType NRT = T->isReferenceType() ? T.getNonReferenceType() : T;
+
+    Expr *DRE = new (Context) DeclRefExpr(P, false, NRT, VK_LValue, ISL);
+    if (!T->isReferenceType()) // reference types do not require this ImplicitCastExpr
+      DRE = ImplicitCastExpr::Create(Context, NRT, CK_LValueToRValue, DRE, nullptr, VK_RValue);
+
+    Args.push_back(DRE);
   }
   CallExpr *CE = CGM.SynthesizeCallToFunctionDecl(&Context, D, Args);
   ________ret________->setInit(CE);
@@ -1259,17 +1263,23 @@ SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D, FunctionDecl 
                                              CK_LValueToRValue, DRE, nullptr, VK_RValue),
                               nullptr);
 
-
   // return the body: precondition checks + call __unchk function (inlined) + postcondition checks
   SmallVector<Stmt *, 4> S;
   if (AS_expects.size())
     S.push_back(AttributedStmt::Create(Context, ISL, AS_expects,
                                        new (Context) NullStmt(ISL)));
-  S.push_back(new (Context) DeclStmt(DeclGroupRef(________ret________), ISL, ISL));
+
+  S.push_back(D->getReturnType() != Context.VoidTy
+                                        ? static_cast<Stmt *>(new (Context) DeclStmt(
+                                              DeclGroupRef(________ret________), ISL, ISL))
+                                        : static_cast<Stmt *>(CE));
+
   if (AS_ensures.size())
     S.push_back(AttributedStmt::Create(Context, ISL, AS_ensures,
                                        new (Context) NullStmt(ISL)));
-  S.push_back(RS);
+
+  if (D->getReturnType() != Context.VoidTy)
+    S.push_back(RS);
   return new (Context) CompoundStmt(Context, S, ISL, ISL);
 }
 
@@ -1283,7 +1293,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   if (getLangOpts().BuildLevel > 0 // off
       && (FD->hasAttr<ExpectsAttr>() || FD->hasAttr<EnsuresAttr>())) {
-    IdentifierInfo *II = &getContext().Idents.get(D->getNameAsString()
+    IdentifierInfo *II = &getContext().Idents.get(FD->getNameAsString()
                              + CXX__UNCHK_FN_SUFFIX);
     FunctionDecl *unchk_FD, *_D = const_cast<FunctionDecl *>(FD);
 
@@ -1320,6 +1330,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   // are inlined as part of the function that checks pre/post-conditions
   if (FD->isImplicit() && FD->getName().contains(CXX__UNCHK_FN_SUFFIX)) {
     Fn->addFnAttr(llvm::Attribute::AlwaysInline);
+    Fn->setLinkage(llvm::Function::InternalLinkage);
   }
 
   // Check if we should generate debug info for this function.
