@@ -1217,6 +1217,62 @@ shouldUseUndefinedBehaviorReturnOptimization(const FunctionDecl *FD,
   return !T.isTriviallyCopyableType(Context);
 }
 
+/// SynthesizeCheckedFunctionBody - generates the body of a function that checks
+/// the preconditions(expects)/postconditions(ensures) and calls the '__unchk' function
+static Stmt *
+SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D, FunctionDecl *D_unchk) {
+  ASTContext &Context = CGM.getContext();
+  SourceLocation ISL;
+  SmallVector<Attr*, 8> AS_expects, AS_ensures;
+  VarDecl *________ret________ = D_unchk->GetInternalReturnVarDecl();
+
+  // translate 'expects'/'ensures' attributes into 'assert'
+  for (const auto *Attr : D_unchk->getAttrs()) {
+    if (const ExpectsAttr *_Attr = dyn_cast<ExpectsAttr>(Attr)) {
+      AS_expects.push_back(AssertAttr::CreateImplicit(Context, _Attr->getLevel(), _Attr->getCond(),
+                                                    ISL));
+    } else if (const EnsuresAttr *_Attr = dyn_cast<EnsuresAttr>(Attr)) {
+      AS_ensures.push_back(AssertAttr::CreateImplicit(Context, _Attr->getLevel(), _Attr->getCond(),
+                                                    ISL));
+    }
+  }
+
+  // build the parameter list for function call
+  SmallVector<Expr*, 8> Args;
+  for (auto &P : D->parameters()) {
+    DeclRefExpr *DRE = new (Context) DeclRefExpr(P, false, P->getType(),
+                                                 VK_LValue, ISL);
+    Args.push_back(ImplicitCastExpr::Create(Context, P->getType(),
+                             CK_LValueToRValue, DRE, nullptr, VK_RValue));
+  }
+  CallExpr *CE = CGM.SynthesizeCallToFunctionDecl(&Context, D, Args);
+  ________ret________->setInit(CE);
+  ________ret________->setInitStyle(VarDecl::CInit);
+
+  // build the return statement
+  DeclRefExpr *DRE = new (Context) DeclRefExpr(________ret________, false,
+                                               ________ret________->getType(),
+                                               VK_LValue, ISL);
+  ReturnStmt *RS = new (Context)
+                   ReturnStmt(ISL, ImplicitCastExpr::Create(Context,
+                                             ________ret________->getType(),
+                                             CK_LValueToRValue, DRE, nullptr, VK_RValue),
+                              nullptr);
+
+
+  // return the body: precondition checks + call __unchk function (inlined) + postcondition checks
+  SmallVector<Stmt *, 4> S;
+  if (AS_expects.size())
+    S.push_back(AttributedStmt::Create(Context, ISL, AS_expects,
+                                       new (Context) NullStmt(ISL)));
+  S.push_back(new (Context) DeclStmt(DeclGroupRef(________ret________), ISL, ISL));
+  if (AS_ensures.size())
+    S.push_back(AttributedStmt::Create(Context, ISL, AS_ensures,
+                                       new (Context) NullStmt(ISL)));
+  S.push_back(RS);
+  return new (Context) CompoundStmt(Context, S, ISL, ISL);
+}
+
 void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                                    const CGFunctionInfo &FnInfo) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
@@ -1224,6 +1280,47 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   FunctionArgList Args;
   QualType ResTy = BuildFunctionArgList(GD, Args);
+
+  if (getLangOpts().BuildLevel > 0 // off
+      && (FD->hasAttr<ExpectsAttr>() || FD->hasAttr<EnsuresAttr>())) {
+    IdentifierInfo *II = &getContext().Idents.get(D->getNameAsString()
+                             + CXX__UNCHK_FN_SUFFIX);
+    FunctionDecl *unchk_FD, *_D = const_cast<FunctionDecl *>(FD);
+
+    // Make a clone of the original FunctionDecl, but adds the CXX__UNCHECKEDFN
+    // suffix to the name.  Differentiates type (member/non-member function).
+    if (isa<CXXMethodDecl>(_D)) {
+      unchk_FD = CXXMethodDecl::Create(getContext(),
+                    cast<CXXRecordDecl>(_D->getDeclContext()), _D->getLocStart(),
+                    DeclarationNameInfo(DeclarationName(II), _D->getNameInfo().getLoc()),
+                    _D->getType(), _D->getTypeSourceInfo(), _D->getStorageClass(),
+                    _D->isInlineSpecified(), _D->isConstexpr(), _D->getLocEnd());
+    } else {
+      unchk_FD = FunctionDecl::Create(getContext(),
+                    _D->getDeclContext(), _D->getLocStart(), _D->getNameInfo().getLoc(),
+                    DeclarationName(II), _D->getType(), _D->getTypeSourceInfo(),
+                    _D->getStorageClass(), _D->isInlineSpecified(),
+                    _D->hasWrittenPrototype(), _D->isConstexpr());
+    }
+    unchk_FD->setImplicit();
+    unchk_FD->setParams(_D->parameters());
+    unchk_FD->setBody(_D->getBody());
+    _D->getParent()->addDecl(unchk_FD);
+
+    // Emit the '__unchk' function
+    CGM.EmitGlobal(unchk_FD);
+
+    // Replaces the body of the original (not yet emitted) function
+    _D->setBody(SynthesizeCheckedFunctionBody(CGM, unchk_FD, _D));
+    _D->dropAttr<ExpectsAttr>();
+    _D->dropAttr<EnsuresAttr>();
+  }
+
+  // Sets the AlwaysInline attribute for '__unchk' functions, so that they
+  // are inlined as part of the function that checks pre/post-conditions
+  if (FD->isImplicit() && FD->getName().contains(CXX__UNCHK_FN_SUFFIX)) {
+    Fn->addFnAttr(llvm::Attribute::AlwaysInline);
+  }
 
   // Check if we should generate debug info for this function.
   if (FD->hasAttr<NoDebugAttr>())

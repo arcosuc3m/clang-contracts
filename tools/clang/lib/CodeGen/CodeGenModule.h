@@ -1248,9 +1248,6 @@ private:
   void EmitObjCPropertyImplementations(const ObjCImplementationDecl *D);
   void EmitObjCIvarInitializations(ObjCImplementationDecl *D);
   
-  // suffix used for unchecked functions (C++ contracts)
-  static constexpr const char *CXX__UNCHECKEDFN = "__unchecked";
-  
   // C++ related functions.
 
   void EmitDeclContext(const DeclContext *DC);
