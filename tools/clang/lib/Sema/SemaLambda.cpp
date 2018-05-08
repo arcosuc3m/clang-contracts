@@ -907,6 +907,9 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   
   // Attributes on the lambda apply to the method.  
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
+  // D0542R2: it will not be possible to specify preconditions and postconditions for lambda expressions
+  if (Method->hasAttr<ExpectsAttr>() || Method->hasAttr<EnsuresAttr>())
+    Diag(EndLoc, diag::err_lambda_expr_unsupported);
 
   // CUDA lambdas get implicit attributes based on the scope in which they're
   // declared.

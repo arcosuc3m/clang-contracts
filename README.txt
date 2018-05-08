@@ -37,8 +37,6 @@ Known problems
 
 To do
 =====
-- Emit diagnostic `preconditions/postconditions are not supported on lambda
-  expressions'
 - Handle contract inheritance for redeclarations as specified in D0542R2 (2017-11-07)
 - Class inheritance?, see D0542R2 specification
 - Call user-defined violation handler, continuation mode?

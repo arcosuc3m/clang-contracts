@@ -6580,6 +6580,8 @@ let CategoryName = "Lambda Issue" in {
     "here">;
   def note_var_explicitly_captured_here : Note<"variable %0 is"
     "%select{| explicitly}1 captured here">;
+  def err_lambda_expr_unsupported : Error<
+    "preconditions/postconditions currently not supported on lambda expressions (D0542R2)">;
 
   // C++14 lambda init-captures.
   def warn_cxx11_compat_init_capture : Warning<
