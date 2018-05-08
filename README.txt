@@ -32,8 +32,6 @@ $ clang++ -std=c++11 -build-level=audit ...
 
 Known problems
 ==============
-- expects/ensures not supported in static member functions, constructors or
-  destructors
 
 To do
 =====

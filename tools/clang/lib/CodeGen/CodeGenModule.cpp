@@ -3224,8 +3224,9 @@ CallExpr *CodeGenModule::SynthesizeCallToFunctionDecl(ASTContext *Context,
   QualType _Type = FD->getType();
   const FunctionType *FT = _Type->getAs<FunctionType>();
   CallExpr *CE;
+  auto *MD = dyn_cast<CXXMethodDecl>(FD);
 
-  if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+  if (MD && MD->isInstance()) {
     CXXThisExpr *TE = new (Context) CXXThisExpr(Loc, MD->getThisType(*Context),
                                                 false);
     MemberExpr *ME = new (Context) MemberExpr(TE, true, Loc, FD,
