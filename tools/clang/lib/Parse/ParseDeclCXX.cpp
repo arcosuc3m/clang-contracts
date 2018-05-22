@@ -3857,7 +3857,7 @@ unsigned Parser::ParseContractAttrArgs(IdentifierInfo *AttrName,
     Ident_default = PP.getIdentifierInfo("default");
     Ident_audit = PP.getIdentifierInfo("audit");
     Ident_always = PP.getIdentifierInfo("always");
-    Ident_________ret________ = PP.getIdentifierInfo("________ret________");
+    Ident_________ret________ = PP.getIdentifierInfo(FunctionDecl::CXX__INTERNAL_RET);
   }
 
   if (AttrKind != AttributeList::AT_Assert)

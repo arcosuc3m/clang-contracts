@@ -3701,7 +3701,7 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
   // instantiate the internal ________ret________ local var
   if (auto Tmpl________ret________ = Tmpl->GetInternalReturnVarDecl()) {
     auto ________ret________ = SemaRef.CXXContracts_MakeInternalReturnVarDecl(
-                                                SemaRef.PP.getIdentifierInfo("________ret________"));
+                                                SemaRef.PP.getIdentifierInfo(FunctionDecl::CXX__INTERNAL_RET));
     ________ret________->setType(New->getReturnType());
     ________ret________->setDeclContext(New);
     New->addDecl(________ret________);

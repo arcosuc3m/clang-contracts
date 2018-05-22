@@ -2788,7 +2788,7 @@ VarDecl *FunctionDecl::GetInternalReturnVarDecl() {
   if (________ret________)
     return ________ret________;
 
-  IdentifierInfo *II = &getASTContext().Idents.get("________ret________");
+  IdentifierInfo *II = &getASTContext().Idents.get(CXX__INTERNAL_RET);
   for (auto i : noload_decls()) {
     if (VarDecl *VD = dyn_cast<VarDecl>(i))
       if (VD->getDeclName() == II)

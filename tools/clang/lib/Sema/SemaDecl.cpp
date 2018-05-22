@@ -2736,7 +2736,7 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
   if ((Old->hasAttr<ExpectsAttr>() || Old->hasAttr<EnsuresAttr>())
       && !cast<FunctionDecl>(New)->GetInternalReturnVarDecl()) {
     auto ________ret________ = CXXContracts_MakeInternalReturnVarDecl(
-                                    PP.getIdentifierInfo("________ret________"));
+                                    PP.getIdentifierInfo(FunctionDecl::CXX__INTERNAL_RET));
     ________ret________->setDeclContext(cast<DeclContext>(New));
     cast<DeclContext>(New)->addDecl(________ret________);
 

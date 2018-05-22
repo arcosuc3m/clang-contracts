@@ -1822,6 +1822,9 @@ public:
   void getNameForDiagnostic(raw_ostream &OS, const PrintingPolicy &Policy,
                             bool Qualified) const override;
 
+  /// \brief local declaration used to temporary store the return value of a checked function
+  static constexpr const char *CXX__INTERNAL_RET = "________ret________";
+
   /// \brief Returns and caches the local ________ret________ declaration that
   /// is used to temporary store the return value of a checked function, i.e.
   /// one that includes expects or ensures attributes.
