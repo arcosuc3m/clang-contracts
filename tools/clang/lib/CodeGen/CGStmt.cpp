@@ -561,7 +561,8 @@ void CodeGenFunction::EmitAssertAttr(const AssertAttr *_Attr,
         .Case("default", 1)
         .Case("audit", 2)
         .Default(~0U);
-    if (CGM.getLangOpts().BuildLevel < Level)
+    if (CGM.getLangOpts().BuildLevel < Level
+        || !HaveInsertPoint()) // do not generate unreachable code; -Wunreachable-code enables warning.
       return;
 
     CallExpr *CE = CGM.SynthesizeCallToFunctionDecl(&getContext(),
