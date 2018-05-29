@@ -168,6 +168,16 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
   // CoverageMappingModuleGen object.
   if (CodeGenOpts.CoverageMapping)
     CoverageMapping.reset(new CoverageMappingModuleGen(*this, *CoverageInfo));
+
+  // Cached StringLiteral instances for contract-level strings
+  StringRef SR_contract_level[] = { "always", "default", "audit" };
+  for (auto &i : SR_contract_level) {
+    __contract_violation_SL.push_back(StringLiteral::Create(C, i, StringLiteral::Ascii, false,
+                                                            C.getConstantArrayType(C.getConstType(C.CharTy),
+                                                                                   llvm::APInt(32, i.size()+1),
+                                                                                   ArrayType::Normal, 0),
+                                                            SourceLocation()));
+  }
 }
 
 CodeGenModule::~CodeGenModule() {}
@@ -387,6 +397,7 @@ void InstrProfStats::reportDiagnostics(DiagnosticsEngine &Diags,
 
 void CodeGenModule::Release() {
   EmitDeferred();
+  EmitCXXContractDependencies();
   EmitVTablesOpportunistically();
   applyGlobalValReplacements();
   applyReplacements();
@@ -1435,7 +1446,10 @@ void CodeGenModule::EmitDeferred() {
     // up with definitions in unusual ways (e.g. by an extern inline
     // function acquiring a strong function redefinition).  Just
     // ignore these cases.
-    if (!GV->isDeclaration())
+    //
+    // __contract_violation_tab is emitted manually after deferred decls
+    // have been emitted.
+    if (!GV->isDeclaration() || D.getDecl() == __contract_violation_tab)
       continue;
 
     // Otherwise, emit the definition and move on to the next one.
@@ -1448,6 +1462,25 @@ void CodeGenModule::EmitDeferred() {
       EmitDeferred();
       assert(DeferredVTables.empty() && DeferredDeclsToEmit.empty());
     }
+  }
+}
+
+void CodeGenModule::EmitCXXContractDependencies() {
+  // __contract_violation_tab will not be emitted in EmitDeferred(); fix initializer-list
+  // and emit it manually
+  if (__contract_violation_tab) {
+    auto ACV_Ty = Context.getConstantArrayType(Context.getConstType(Context.getBuiltinContractViolationType()),
+                                               llvm::APInt(32, __contract_violation_ILE.size()),
+                                               ArrayType::Normal, 0);
+    InitListExpr *ILE = new (Context) InitListExpr(Context, SourceLocation(),
+                                                   llvm::makeArrayRef(__contract_violation_ILE),
+                                                   SourceLocation());
+    ILE->setType(ACV_Ty);
+    __contract_violation_tab->setInit(ILE);
+    __contract_violation_tab->setInitStyle(VarDecl::CInit);
+    __contract_violation_tab->setType(ACV_Ty);
+
+    EmitGlobalVarDefinition(__contract_violation_tab, !__contract_violation_tab->hasDefinition());
   }
 }
 
@@ -4399,6 +4432,67 @@ bool CodeGenModule::lookupRepresentativeDecl(StringRef MangledName,
     return false;
   Result = Res->getValue();
   return true;
+}
+
+llvm::APInt CodeGenModule::Register_contract_violation(SourceLocation Loc, StringRef Func,
+                                                       StringRef Comment, unsigned Level) {
+  auto CV_Ty = Context.getConstType(Context.getBuiltinContractViolationType());
+  QualType CChar_Ty = Context.getConstType(Context.CharTy);
+  QualType PCChar_Ty = Context.getPointerType(CChar_Ty);
+
+  SourceLocation InvalidLoc;
+
+  /// first reference to __contract_violation_tab[]
+  if (!__contract_violation_tab) {
+    __contract_violation_tab = VarDecl::Create(Context, Context.getTranslationUnitDecl(),
+                                               InvalidLoc, InvalidLoc, &Context.Idents.get("__contract_violation_tab"),
+                                               Context.getIncompleteArrayType(CV_Ty, ArrayType::Normal, 0),
+                                               nullptr, SC_Static);
+    __contract_violation_tab->setConstexpr(true);
+
+    EmitGlobal(__contract_violation_tab); // delayed until EmitDeferred() is called
+  }
+
+  /// construct InitListExpr for a __builtin_contract_violation_t object
+  SmallVector<Expr *, 5> Vec;
+
+  FullSourceLoc FSL = Context.getFullLoc(Loc);
+  StringRef File = FSL.getFileEntry()->getName();
+  // __line
+  Vec.push_back(IntegerLiteral::Create(Context, llvm::APInt(32, FSL.getLineNumber()), Context.IntTy,
+                                       InvalidLoc));
+
+  StringLiteral *Str[] = {
+    // __file
+    StringLiteral::Create(Context, File, StringLiteral::Ascii, false,
+                          Context.getConstantArrayType(CChar_Ty, llvm::APInt(32, File.size()+1),
+                                                       ArrayType::Normal, 0),
+                          InvalidLoc),
+    // __func
+    StringLiteral::Create(Context, Func, StringLiteral::Ascii, false,
+                          Context.getConstantArrayType(CChar_Ty, llvm::APInt(32, Func.size()+1),
+                                                       ArrayType::Normal, 0),
+                          InvalidLoc),
+    // __comment
+    StringLiteral::Create(Context, Comment, StringLiteral::Ascii, false,
+                          Context.getConstantArrayType(CChar_Ty, llvm::APInt(32, Comment.size()+1),
+                                                       ArrayType::Normal, 0),
+                          InvalidLoc),
+    // __level (cached)
+    __contract_violation_SL[Level],
+  };
+  for (auto &i : Str)
+    Vec.push_back(ImplicitCastExpr::Create(Context, PCChar_Ty, CK_ArrayToPointerDecay, i,
+                                           nullptr, VK_RValue));
+
+  InitListExpr *ILE = new (Context) InitListExpr(Context, InvalidLoc, Vec, InvalidLoc);
+  ILE->setType(CV_Ty);
+
+  /// register and return a llvm::APInt that can be used as RHS for a ArraySubscriptExpr
+  /// e.g. __contract_violation_tab[1]
+  ///                               ^
+  __contract_violation_ILE.push_back(ILE);
+  return std::move(llvm::APInt(32, __contract_violation_ILE.size()-1));
 }
 
 /// Emits metadata nodes associating all the global values in the

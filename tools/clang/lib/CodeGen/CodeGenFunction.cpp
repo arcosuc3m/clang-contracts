@@ -1230,10 +1230,10 @@ SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D, FunctionDecl 
   for (const auto *Attr : D_unchk->getAttrs()) {
     if (const ExpectsAttr *_Attr = dyn_cast<ExpectsAttr>(Attr)) {
       AS_expects.push_back(AssertAttr::CreateImplicit(Context, _Attr->getLevel(), _Attr->getCond(),
-                                                    ISL));
+                                                    _Attr->getLocation()));
     } else if (const EnsuresAttr *_Attr = dyn_cast<EnsuresAttr>(Attr)) {
       AS_ensures.push_back(AssertAttr::CreateImplicit(Context, _Attr->getLevel(), _Attr->getCond(),
-                                                    ISL));
+                                                    _Attr->getLocation()));
     }
   }
 

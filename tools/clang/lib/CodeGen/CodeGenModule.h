@@ -279,6 +279,10 @@ private:
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
 
+  VarDecl *__contract_violation_tab = nullptr;
+  std::vector<Expr *> __contract_violation_ILE; // InitListExpr of type __builtin_contract_violation_t for each emitted `assert'
+  llvm::SmallVector<StringLiteral *, 3> __contract_violation_SL;
+
   std::unique_ptr<CodeGenTBAA> TBAA;
   
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
@@ -632,6 +636,10 @@ public:
 
   CGCXXABI &getCXXABI() const { return *ABI; }
   llvm::LLVMContext &getLLVMContext() { return VMContext; }
+
+  VarDecl *getContractViolationTab() { return __contract_violation_tab; }
+  llvm::APInt Register_contract_violation(SourceLocation Loc, StringRef Func,
+                                          StringRef Comment, unsigned Level);
 
   bool shouldUseTBAA() const { return TBAA != nullptr; }
 
@@ -1283,6 +1291,9 @@ private:
 
   /// Emit any needed decls for which code generation was deferred.
   void EmitDeferred();
+
+  /// Emit required definitions for C++ D0542R2 support, e.g. __contract_violation_tab
+  void EmitCXXContractDependencies();
 
   /// Try to emit external vtables as available_externally if they have emitted
   /// all inlined virtual functions.  It runs after EmitDeferred() and therefore
