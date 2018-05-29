@@ -1,0 +1,29 @@
+// <contract> -*- C++ -*-
+
+/** @file include/contract
+ *  This is a Standard C++ Library header.
+ */
+
+#ifndef _LIBCXX_CONTRACT
+#define _LIBCXX_CONTRACT 1
+
+#if __cplusplus >= 201703L
+# include <string_view>
+#else
+# include <experimental/string_view>
+#endif
+
+namespace std {
+  using contract_violation = __builtin_contract_violation_t;
+#if __cplusplus < 201703L
+  using string_view = experimental::string_view;
+#endif
+}
+
+int __builtin_contract_violation_t::line_number() const noexcept { return __line; }
+auto __builtin_contract_violation_t::file_name() const noexcept { return std::string_view{__file}; }
+auto __builtin_contract_violation_t::function_name() const noexcept { return std::string_view{__func}; }
+auto __builtin_contract_violation_t::comment() const noexcept { return std::string_view{__comment}; }
+auto __builtin_contract_violation_t::assertion_level() const noexcept { return std::string_view{__level}; }
+
+#endif /* _LIBCXX_CONTRACT */

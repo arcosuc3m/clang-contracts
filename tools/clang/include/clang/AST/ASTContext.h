@@ -260,6 +260,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// __builtin_va_list type.
   mutable TypedefDecl *BuiltinVaListDecl;
 
+  /// \brief The QualType for typedef __builtin_contract_violation __builtin_contract_violation_t
+  QualType BuiltinContractViolationType;
+
   /// The typedef for the predefined \c __builtin_ms_va_list type.
   mutable TypedefDecl *BuiltinMSVaListDecl;
 
@@ -1811,6 +1814,9 @@ public:
   /// \brief Retrieve the C type declaration corresponding to the predefined
   /// \c __builtin_va_list type.
   TypedefDecl *getBuiltinVaListDecl() const;
+
+  /// \brief Retrieve the QualType for the __builtin_contract_violation_t (cached).
+  QualType getBuiltinContractViolationType();
 
   /// \brief Retrieve the type of the \c __builtin_va_list type.
   QualType getBuiltinVaListType() const {

@@ -738,7 +738,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       DependentTemplateSpecializationTypes(this_()),
       SubstTemplateTemplateParmPacks(this_()),
       GlobalNestedNameSpecifier(nullptr), Int128Decl(nullptr),
-      UInt128Decl(nullptr), BuiltinVaListDecl(nullptr),
+      UInt128Decl(nullptr), BuiltinVaListDecl(nullptr), BuiltinContractViolationType(),
       BuiltinMSVaListDecl(nullptr), ObjCIdDecl(nullptr), ObjCSelDecl(nullptr),
       ObjCClassDecl(nullptr), ObjCProtocolClassDecl(nullptr), BOOLDecl(nullptr),
       CFConstantStringTagDecl(nullptr), CFConstantStringTypeDecl(nullptr),
@@ -7006,6 +7006,54 @@ TypedefDecl *ASTContext::getBuiltinVaListDecl() const {
   }
 
   return BuiltinVaListDecl;
+}
+
+QualType ASTContext::getBuiltinContractViolationType() {
+  if (!BuiltinContractViolationType.isNull())
+    return BuiltinContractViolationType;
+
+  // class __builtin_contract_violation {
+  auto RD = static_cast<CXXRecordDecl *>(buildImplicitRecord("__builtin_contract_violation", TTK_Class));
+  RD->startDefinition();
+
+  // public:
+  QualType PCCharTy = getPointerType(getConstType(CharTy));
+  FunctionProtoType::ExtProtoInfo EPI;
+  EPI.ExceptionSpec.Type = EST_BasicNoexcept;
+  EPI.TypeQuals = Qualifiers::Const;
+  struct { const char *Ident; QualType Ty; } Members[] = {
+    { "__line",    IntTy },    // POD if access specifier is AS_public
+    { "__file",    PCCharTy },
+    { "__func",    PCCharTy },
+    { "__comment", PCCharTy },
+    { "__level",   PCCharTy },
+    { "line_number",     getFunctionType(IntTy, {}, EPI) },
+    { "file_name",       getFunctionType(getAutoDeductType(), {}, EPI) },
+    { "function_name",   getFunctionType(getAutoDeductType(), {}, EPI) },
+    { "comment",         getFunctionType(getAutoDeductType(), {}, EPI) },
+    { "assertion_level", getFunctionType(getAutoDeductType(), {}, EPI) },
+  };
+
+  for (auto &M : Members) {
+    Decl *D = M.Ty->isFunctionType()
+                ? static_cast<Decl *>(CXXMethodDecl::Create(*this, RD, SourceLocation(),
+                                                            DeclarationNameInfo(&Idents.get(M.Ident),
+                                                            SourceLocation()), M.Ty, nullptr, SC_None,
+                                                            /*isInline=*/false, /*isConstExpr=*/false,
+                                                            SourceLocation()))
+                : static_cast<Decl *>(FieldDecl::Create(*this, RD, SourceLocation(), SourceLocation(),
+                                                        &Idents.get(M.Ident), M.Ty, /*TInfo=*/nullptr,
+                                                        /*BW=*/nullptr, /*Mutable=*/false, ICIS_NoInit));
+    D->setAccess(AS_public);
+    RD->addDecl(D);
+  }
+
+  // };
+  RD->completeDefinition();
+
+  // typedef __builtin_contract_violation __builtin_contract_violation_t
+  auto TD = buildImplicitTypedef(getRecordType(RD), "__builtin_contract_violation_t");
+  return (BuiltinContractViolationType = getTypeDeclType(TD));
 }
 
 Decl *ASTContext::getVaListTagDecl() const {

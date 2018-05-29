@@ -327,6 +327,11 @@ void Sema::Initialize() {
   DeclarationName BuiltinVaList = &Context.Idents.get("__builtin_va_list");
   if (IdResolver.begin(BuiltinVaList) == IdResolver.end())
     PushOnScopeChains(Context.getBuiltinVaListDecl(), TUScope);
+
+  if (getLangOpts().CPlusPlus
+      && IdResolver.begin(&Context.Idents.get("__builtin_contract_violation")) == IdResolver.end())
+    PushOnScopeChains(Context.getBuiltinContractViolationType()->getAs<TypedefType>()->getDecl(),
+                      TUScope);
 }
 
 Sema::~Sema() {
