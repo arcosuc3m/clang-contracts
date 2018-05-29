@@ -2294,6 +2294,10 @@ def std_EQ : Joined<["-", "--"], "std=">, Flags<[CC1Option]>,
   }]>;
 def build_level_EQ : Joined<["-", "--"], "build-level=">, Flags<[CC1Option, CC1AsOption, CoreOption]>,
   HelpText<"Build level for this translation unit">, Values<"off,default,audit">;
+def contract_violation_handler_EQ : Joined<["-", "--"], "contract-violation-handler=">, Flags<[CC1Option, CC1AsOption, CoreOption]>,
+  HelpText<"Name of the handler function to be called if a contract is violated">;
+def enable_continue_after_violation : Joined<["-", "--"], "enable-continue-after-violation">, Flags<[CC1Option, CC1AsOption, CoreOption]>,
+  HelpText<"Enable continuation after violation of a contract">;
 def stdlib_EQ : Joined<["-", "--"], "stdlib=">, Flags<[CC1Option]>,
   HelpText<"C++ standard library to use">, Values<"libc++,libstdc++,platform">;
 def sub__library : JoinedOrSeparate<["-"], "sub_library">;

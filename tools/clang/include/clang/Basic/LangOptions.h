@@ -117,6 +117,12 @@ public:
 
   std::string ObjCConstantStringClass;
   
+  /// \brief The name of the handler function to be called if a contract
+  /// is violated (C++ D0542R2).
+  ///
+  /// If none is specified, std::terminate()
+  std::string ContractViolationHandler;
+
   /// \brief The name of the handler function to be called when -ftrapv is
   /// specified.
   ///

@@ -171,6 +171,7 @@ COMPATIBLE_LANGOPT(FastMath          , 1, 0, "fast FP math optimizations, and __
 COMPATIBLE_LANGOPT(FiniteMathOnly    , 1, 0, "__FINITE_MATH_ONLY__ predefined macro")
 COMPATIBLE_LANGOPT(UnsafeFPMath      , 1, 0, "Unsafe Floating Point Math")
 VALUE_LANGOPT(BuildLevel         , 2, 1, "C++ contracts build level") ///< -build-level=off,default,audit
+VALUE_LANGOPT(EnableContinueAfterViolation , 1, 0, "Set the violation continuation mode to on (D0542R2)")
 
 BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __weak/__strong ivars")
 

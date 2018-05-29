@@ -3634,8 +3634,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_trigraphs);
   }
 
-  // Manually forward arg to CC1
+  // Manually forward options to CC1
   if (Arg *A = Args.getLastArg(options::OPT_build_level_EQ))
+    A->render(Args, CmdArgs);
+  if (Arg *A = Args.getLastArg(options::OPT_contract_violation_handler_EQ))
+    A->render(Args, CmdArgs);
+  if (Arg *A = Args.getLastArg(options::OPT_enable_continue_after_violation))
     A->render(Args, CmdArgs);
 
   // GCC's behavior for -Wwrite-strings is a bit strange:
