@@ -328,10 +328,52 @@ void Sema::Initialize() {
   if (IdResolver.begin(BuiltinVaList) == IdResolver.end())
     PushOnScopeChains(Context.getBuiltinVaListDecl(), TUScope);
 
-  if (getLangOpts().CPlusPlus
-      && IdResolver.begin(&Context.Idents.get("__builtin_contract_violation")) == IdResolver.end())
-    PushOnScopeChains(Context.getBuiltinContractViolationType()->getAs<TypedefType>()->getDecl(),
-                      TUScope);
+  // Declarations for C++ contract support (D0542R2)
+  if (getLangOpts().CPlusPlus) {
+    if (IdResolver.begin(&Context.Idents.get("__builtin_contract_violation")) == IdResolver.end())
+      PushOnScopeChains(Context.getBuiltinContractViolationType()->getAs<TypedefType>()->getDecl(),
+                        TUScope);
+
+    if (getLangOpts().BuildLevel == 0 /*off*/)
+      return;
+
+    // extern "C" {
+    LinkageSpecDecl *extern_C = LinkageSpecDecl::Create(Context, Context.getTranslationUnitDecl(),
+                                                        SourceLocation(), SourceLocation(),
+                                                        LinkageSpecDecl::lang_c, /*HasBraces=*/true);
+    extern_C->setImplicit();
+    Context.getTranslationUnitDecl()->addDecl(extern_C);
+
+    // _ZSt9terminatev
+    FunctionProtoType::ExtProtoInfo EPI;
+    EPI.ExceptionSpec.Type = EST_BasicNoexcept;
+    EPI.ExtInfo = EPI.ExtInfo.withNoReturn(true);
+    auto FD_terminate = FunctionDecl::Create(Context, extern_C, SourceLocation(), SourceLocation(),
+                                             &Context.Idents.get("_ZSt9terminatev"),
+                                             Context.getFunctionType(Context.VoidTy, {}, EPI),
+                                             nullptr, SC_None);
+    FD_terminate->setImplicit();
+    extern_C->addDecl(FD_terminate);
+
+    Context.setViolationHandler(FD_terminate);
+    if (getLangOpts().ContractViolationHandler.empty())
+      return;
+
+    // -contract-violation-handler=
+    auto FD_vh = Context.getViolationHandlerDecl(&Context.Idents.get(
+                                                  getLangOpts().ContractViolationHandler));
+    FD_vh->setDeclContext(extern_C);
+    extern_C->addDecl(FD_vh);
+    // }
+
+    // required for -enable-continue-after-violation support
+    auto FD_builtin_vh = Context.getViolationHandlerDecl(&Context.Idents.get(
+                                                          "__builtin_violation_handler"), SC_Static);
+    FD_builtin_vh->setDeletedAsWritten();
+    PushOnScopeChains(FD_builtin_vh, TUScope);
+
+    Context.setViolationHandler(FD_builtin_vh); // replaces _ZSt9terminatev
+  }
 }
 
 Sema::~Sema() {

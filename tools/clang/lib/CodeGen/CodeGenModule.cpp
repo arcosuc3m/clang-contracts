@@ -1466,22 +1466,47 @@ void CodeGenModule::EmitDeferred() {
 }
 
 void CodeGenModule::EmitCXXContractDependencies() {
-  // __contract_violation_tab will not be emitted in EmitDeferred(); fix initializer-list
-  // and emit it manually
-  if (__contract_violation_tab) {
-    auto ACV_Ty = Context.getConstantArrayType(Context.getConstType(Context.getBuiltinContractViolationType()),
-                                               llvm::APInt(32, __contract_violation_ILE.size()),
-                                               ArrayType::Normal, 0);
-    InitListExpr *ILE = new (Context) InitListExpr(Context, SourceLocation(),
-                                                   llvm::makeArrayRef(__contract_violation_ILE),
-                                                   SourceLocation());
-    ILE->setType(ACV_Ty);
-    __contract_violation_tab->setInit(ILE);
-    __contract_violation_tab->setInitStyle(VarDecl::CInit);
-    __contract_violation_tab->setType(ACV_Ty);
+  /// __contract_violation_tab will not be emitted in EmitDeferred(); fix initializer-list
+  /// and emit it manually
+  if (!__contract_violation_tab)
+    return;
+  auto ACV_Ty = Context.getConstantArrayType(Context.getConstType(Context.getBuiltinContractViolationType()),
+                                             llvm::APInt(32, __contract_violation_ILE.size()),
+                                             ArrayType::Normal, 0);
+  InitListExpr *ILE = new (Context) InitListExpr(Context, SourceLocation(),
+                                                 llvm::makeArrayRef(__contract_violation_ILE),
+                                                 SourceLocation());
+  ILE->setType(ACV_Ty);
+  __contract_violation_tab->setInit(ILE);
+  __contract_violation_tab->setInitStyle(VarDecl::CInit);
+  __contract_violation_tab->setType(ACV_Ty);
 
-    EmitGlobalVarDefinition(__contract_violation_tab, !__contract_violation_tab->hasDefinition());
-  }
+  EmitGlobalVarDefinition(__contract_violation_tab, !__contract_violation_tab->hasDefinition());
+
+  /// Sema::Initialize: __builtin_violation_handler() was forward declared; emit definition if required
+  if (getLangOpts().ContractViolationHandler.empty())
+    return;
+
+  FunctionProtoType::ExtProtoInfo EPI;
+  EPI.ExtInfo = EPI.ExtInfo.withNoReturn(!getLangOpts().EnableContinueAfterViolation);
+  auto FD_vh = Context.getViolationHandlerDecl(&Context.Idents.get(
+                                                "__builtin_violation_handler"), SC_Static, EPI);
+  ParmVarDecl *__parm0 = FD_vh->getParamDecl(0);
+  __parm0->setDeclName(&Context.Idents.get("__parm0"));
+
+  SmallVector<Stmt *,2> CE;
+  CE.push_back(SynthesizeCallToFunctionDecl(&Context, const_cast<FunctionDecl *>( // user-defined handler
+                                             GetRuntimeFunctionDecl(Context,
+                                                                    getLangOpts().ContractViolationHandler)),
+                                            { new (Context) DeclRefExpr(__parm0, false,
+                                                                        __parm0->getType().getNonReferenceType(),
+                                                                        VK_LValue, SourceLocation()) }));
+  if (!getLangOpts().EnableContinueAfterViolation)
+    CE.push_back(SynthesizeCallToFunctionDecl(&Context, const_cast<FunctionDecl *>( // _ZSt9terminatev
+                                               GetRuntimeFunctionDecl(Context, "_ZSt9terminatev")), {}));
+  FD_vh->setBody(new (Context) CompoundStmt(Context, CE, SourceLocation(), SourceLocation()));
+
+  EmitGlobal(FD_vh);
 }
 
 void CodeGenModule::EmitVTablesOpportunistically() {

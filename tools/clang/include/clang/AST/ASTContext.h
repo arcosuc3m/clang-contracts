@@ -263,6 +263,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// \brief The QualType for typedef __builtin_contract_violation __builtin_contract_violation_t
   QualType BuiltinContractViolationType;
 
+  /// \brief The current C++ contract violation handler.
+  FunctionDecl *ViolationHandler = nullptr;
+
   /// The typedef for the predefined \c __builtin_ms_va_list type.
   mutable TypedefDecl *BuiltinMSVaListDecl;
 
@@ -1202,6 +1205,9 @@ public:
     return cudaConfigureCallDecl;
   }
 
+  void setViolationHandler(FunctionDecl *FD) { ViolationHandler = FD; }
+  FunctionDecl *getViolationHandler() { return ViolationHandler; }
+
   /// Returns true iff we need copy/dispose helpers for the given type.
   bool BlockRequiresCopying(QualType Ty, const VarDecl *D);
 
@@ -1817,6 +1823,10 @@ public:
 
   /// \brief Retrieve the QualType for the __builtin_contract_violation_t (cached).
   QualType getBuiltinContractViolationType();
+
+  /// \brief Retrieve a FunctionDecl of type `void(const __builtin_contract_violation_t &)'
+  FunctionDecl *getViolationHandlerDecl(IdentifierInfo *II, StorageClass SC = SC_None,
+                                        FunctionProtoType::ExtProtoInfo EPI = FunctionProtoType::ExtProtoInfo{});
 
   /// \brief Retrieve the type of the \c __builtin_va_list type.
   QualType getBuiltinVaListType() const {

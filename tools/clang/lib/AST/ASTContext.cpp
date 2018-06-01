@@ -7056,6 +7056,19 @@ QualType ASTContext::getBuiltinContractViolationType() {
   return (BuiltinContractViolationType = getTypeDeclType(TD));
 }
 
+FunctionDecl *ASTContext::getViolationHandlerDecl(IdentifierInfo *II, StorageClass SC,
+                                                  FunctionProtoType::ExtProtoInfo EPI) {
+  QualType ParamTy = getLValueReferenceType(getConstType(getBuiltinContractViolationType()));
+  FunctionDecl *FD = FunctionDecl::Create(*this, getTranslationUnitDecl(),
+                                          SourceLocation(), SourceLocation(), II,
+                                          getFunctionType(VoidTy, { ParamTy }, EPI),
+                                          /*TInfo=*/nullptr, SC);
+  FD->setParams({ ParmVarDecl::Create(*this, FD, SourceLocation(), SourceLocation(),
+                                      nullptr, ParamTy, /*TInfo=*/nullptr, SC_None, nullptr) });
+  FD->setImplicit();
+  return FD;
+}
+
 Decl *ASTContext::getVaListTagDecl() const {
   // Force the creation of VaListTagDecl by building the __builtin_va_list
   // declaration.

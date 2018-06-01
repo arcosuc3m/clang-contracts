@@ -84,39 +84,8 @@ void PrettyStackTraceParserEntry::print(raw_ostream &OS) const {
     OS << ": current parser token '" << StringRef(Spelling, Length) << "'\n";
   }
 }
+
 }  // namespace
-
-static FunctionDecl *makeFunctionDecl(ASTContext &Context, DeclContext *DC,
-                                      QualType ResultTy, StringRef Name,
-                                      ArrayRef<QualType> Args,
-                                      FunctionProtoType::ExtProtoInfo &EPI) {
-  auto FD = FunctionDecl::Create(Context, DC, SourceLocation(),
-                                 SourceLocation(), &Context.Idents.get(Name),
-                                 Context.getFunctionType(ResultTy, Args, EPI),
-                                 nullptr, SC_Extern);
-  FD->setImplicit();
-  return FD;
-}
-
-/// CXXContracts_InjectDecls - Inject declarations required for C++
-/// contract support (D0542R2)
-static void CXXContracts_InjectDecls(ASTContext &Context) {
-  // extern C
-  auto LSD = LinkageSpecDecl::Create(Context, Context.getTranslationUnitDecl(),
-                                     SourceLocation(), SourceLocation(),
-                                     LinkageSpecDecl::lang_c, true);
-  LSD->setImplicit();
-
-  // abort
-  FunctionProtoType::ExtProtoInfo EPI_abort;
-  EPI_abort.ExceptionSpec.Type = EST_DynamicNone;
-  EPI_abort.ExtInfo = EPI_abort.ExtInfo.withNoReturn(true);
-  auto FD_abort = makeFunctionDecl(Context, LSD, Context.VoidTy, "abort", {},
-                                   EPI_abort);
-
-  LSD->addDecl(FD_abort);
-  Context.getTranslationUnitDecl()->addDecl(LSD);
-}
 
 //===----------------------------------------------------------------------===//
 // Public interface to the file
@@ -153,10 +122,6 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   std::swap(OldCollectStats, S.CollectStats);
 
   ASTConsumer *Consumer = &S.getASTConsumer();
-  // Inject required declarations for C++ contract support (D0542R2)
-  if (S.getASTContext().getLangOpts().CPlusPlus
-       && S.getASTContext().getLangOpts().BuildLevel > 0)
-    CXXContracts_InjectDecls(S.getASTContext());
 
   std::unique_ptr<Parser> ParseOP(
       new Parser(S.getPreprocessor(), S, SkipFunctionBodies));
