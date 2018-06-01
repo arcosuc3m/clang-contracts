@@ -556,30 +556,56 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
 
 void CodeGenFunction::EmitAssertAttr(const AssertAttr *_Attr,
                                      SourceLocation Loc) {
-    unsigned Level = llvm::StringSwitch<unsigned>(_Attr->getLevel()->getName())
-        .Case("always", 0)  // Assert is emitted even if -build-level=off
-        .Case("default", 1)
-        .Case("audit", 2)
-        .Default(~0U);
-    if (CGM.getLangOpts().BuildLevel < Level
-        || !HaveInsertPoint()) // do not generate unreachable code; -Wunreachable-code enables warning.
-      return;
+  unsigned Level = llvm::StringSwitch<unsigned>(_Attr->getLevel()->getName())
+      .Case("always", 0)  // Assert is emitted even if -build-level=off
+      .Case("default", 1)
+      .Case("audit", 2)
+      .Default(~0U);
+  if (CGM.getLangOpts().BuildLevel < Level
+      || !HaveInsertPoint()) // do not generate unreachable code; -Wunreachable-code enables warning.
+    return;
 
-    CallExpr *CE = CGM.SynthesizeCallToFunctionDecl(&getContext(),
-           const_cast<FunctionDecl *>(CGM.GetRuntimeFunctionDecl(getContext(),
-                                      "abort")), {});
+  SmallVector<Expr *, 1> Args;
+  auto &C = getContext();
 
-    // negate expression
-    ParenExpr *PE = new (getContext()) ParenExpr(
-            SourceLocation(), SourceLocation(), _Attr->getCond());
-    UnaryOperator *UO = new (getContext()) UnaryOperator(
-            PE, UO_LNot, PE->getType(), VK_RValue, OK_Ordinary,
-            SourceLocation());
+  if (!CGM.getLangOpts().ContractViolationHandler.empty()) {
+    // __comment is the expression as written in the source code
+    auto &SM = C.getSourceManager();
+    const char *S = SM.getCharacterData(_Attr->getCond()->getLocStart()),
+               *E = SM.getCharacterData(_Attr->getCond()->getLocEnd());
+    StringRef __comment(S, (E-S)+1);
 
-    auto _S = new (getContext()) IfStmt(getContext(),
-            Loc, false, nullptr, nullptr, UO, CE);
-    // TODO: optimize: "if.end" branch is more likely
-    EmitIfStmt(*_S);
+    // Register a std::contract_violation object in `__contract_violation_tab[]'
+    llvm::APInt I = CGM.Register_contract_violation(_Attr->getLocation(),
+                                                    cast<FunctionDecl>(CurFuncDecl)->getNameAsString(),
+                                                    __comment, Level);
+    IntegerLiteral *IL = IntegerLiteral::Create(C, I, C.IntTy, SourceLocation());
+
+    // Add argument of type `const __builtin_contract_violation&' to the Args vector
+    DeclRefExpr *__contract_violation_tab = new (C) DeclRefExpr(CGM.getContractViolationTab(),
+                                                                /*RefersToEnclosingVariableOrCapture=*/false,
+                                                                CGM.getContractViolationTab()->getType(),
+                                                                VK_LValue, SourceLocation());
+
+    QualType Ty = C.getConstType(C.getBuiltinContractViolationType());
+    ImplicitCastExpr *ICE = ImplicitCastExpr::Create(C, C.getPointerType(Ty), CK_ArrayToPointerDecay,
+                                                     __contract_violation_tab, /*BasePath=*/nullptr, VK_RValue);
+    Args.push_back(new (C) ArraySubscriptExpr(ICE, IL, Ty, VK_LValue, OK_Ordinary, SourceLocation()));
+  }
+
+  CallExpr *CE = CGM.SynthesizeCallToFunctionDecl(&C, C.getViolationHandler(), llvm::makeArrayRef(Args));
+
+  // negate expression
+  ParenExpr *PE = new (getContext()) ParenExpr(
+          SourceLocation(), SourceLocation(), _Attr->getCond());
+  UnaryOperator *UO = new (getContext()) UnaryOperator(
+          PE, UO_LNot, PE->getType(), VK_RValue, OK_Ordinary,
+          SourceLocation());
+
+  auto _S = new (getContext()) IfStmt(getContext(),
+          Loc, false, nullptr, nullptr, UO, CE);
+  // TODO: optimize: "if.end" branch is more likely
+  EmitIfStmt(*_S);
 }
 
 void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {

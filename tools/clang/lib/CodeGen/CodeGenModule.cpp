@@ -1506,7 +1506,7 @@ void CodeGenModule::EmitCXXContractDependencies() {
                                                GetRuntimeFunctionDecl(Context, "_ZSt9terminatev")), {}));
   FD_vh->setBody(new (Context) CompoundStmt(Context, CE, SourceLocation(), SourceLocation()));
 
-  EmitGlobal(FD_vh);
+  EmitGlobalDefinition(FD_vh);
 }
 
 void CodeGenModule::EmitVTablesOpportunistically() {
