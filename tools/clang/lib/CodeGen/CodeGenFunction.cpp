@@ -1293,8 +1293,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   if (getLangOpts().BuildLevel > 0 // off
       && (FD->hasAttr<ExpectsAttr>() || FD->hasAttr<EnsuresAttr>())) {
-    IdentifierInfo *II = &getContext().Idents.get(FD->getNameAsString()
-                             + CXX__UNCHK_FN_PREFIX);
+    IdentifierInfo *II = &getContext().Idents.get(CXX__UNCHK_FN_PREFIX
+                             + FD->getNameAsString());
     FunctionDecl *unchk_FD, *_D = const_cast<FunctionDecl *>(FD);
 
     // Make a clone of the original FunctionDecl, but adds the CXX__UNCHK_FN_PREFIX
