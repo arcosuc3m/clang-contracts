@@ -1294,10 +1294,10 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   if (getLangOpts().BuildLevel > 0 // off
       && (FD->hasAttr<ExpectsAttr>() || FD->hasAttr<EnsuresAttr>())) {
     IdentifierInfo *II = &getContext().Idents.get(FD->getNameAsString()
-                             + CXX__UNCHK_FN_SUFFIX);
+                             + CXX__UNCHK_FN_PREFIX);
     FunctionDecl *unchk_FD, *_D = const_cast<FunctionDecl *>(FD);
 
-    // Make a clone of the original FunctionDecl, but adds the CXX__UNCHECKEDFN
+    // Make a clone of the original FunctionDecl, but adds the CXX__UNCHK_FN_PREFIX
     // suffix to the name.  Differentiates type (member/non-member function).
     if (isa<CXXMethodDecl>(_D)) {
       unchk_FD = CXXMethodDecl::Create(getContext(),
@@ -1317,7 +1317,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     unchk_FD->setBody(_D->getBody());
     _D->getParent()->addDecl(unchk_FD);
 
-    // Emit the '__unchk' function
+    // Emit the '__unchk_' function
     CGM.EmitGlobal(unchk_FD);
 
     // Replaces the body of the original (not yet emitted) function
@@ -1326,9 +1326,9 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     _D->dropAttr<EnsuresAttr>();
   }
 
-  // Sets the AlwaysInline attribute for '__unchk' functions, so that they
+  // Sets the AlwaysInline attribute for '__unchk_' functions, so that they
   // are inlined as part of the function that checks pre/post-conditions
-  if (FD->isImplicit() && FD->getName().contains(CXX__UNCHK_FN_SUFFIX)) {
+  if (FD->isImplicit() && FD->getName().startswith(CXX__UNCHK_FN_PREFIX)) {
     Fn->addFnAttr(llvm::Attribute::AlwaysInline);
     Fn->setLinkage(llvm::Function::InternalLinkage);
   }

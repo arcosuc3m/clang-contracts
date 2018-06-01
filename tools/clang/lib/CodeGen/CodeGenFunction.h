@@ -1623,8 +1623,8 @@ public:
 
   QualType BuildFunctionArgList(GlobalDecl GD, FunctionArgList &Args);
 
-  // suffix used for unchecked functions (C++ contracts); see CodeGenFunction::GenerateCode()
-  static constexpr const char *CXX__UNCHK_FN_SUFFIX = "__unchk";
+  // prefix used for unchecked functions (C++ contracts); see CodeGenFunction::GenerateCode()
+  static constexpr const char *CXX__UNCHK_FN_PREFIX = "__unchk_";
   
   void GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                     const CGFunctionInfo &FnInfo);
