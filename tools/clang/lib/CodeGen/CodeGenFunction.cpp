@@ -1314,6 +1314,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     }
     unchk_FD->setImplicit();
     unchk_FD->setParams(_D->parameters());
+    unchk_FD->setAccess(_D->getAccess());
     unchk_FD->setBody(_D->getBody());
     _D->getParent()->addDecl(unchk_FD);
 
@@ -1327,8 +1328,12 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   }
 
   // Sets the AlwaysInline attribute for '__unchk_' functions, so that they
-  // are inlined as part of the function that checks pre/post-conditions
-  if (FD->isImplicit() && FD->getName().startswith(CXX__UNCHK_FN_PREFIX)) {
+  // are inlined as part of the function that checks pre/post-conditions.
+  //
+  // Because it is always inlined, InternalLinkage causes the function to be removed
+  // from the IR.
+  if (FD->isImplicit()
+      && StringRef(FD->getNameAsString()).startswith(CXX__UNCHK_FN_PREFIX)) {
     Fn->addFnAttr(llvm::Attribute::AlwaysInline);
     Fn->setLinkage(llvm::Function::InternalLinkage);
   }
