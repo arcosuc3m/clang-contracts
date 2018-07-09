@@ -577,10 +577,14 @@ void CodeGenFunction::EmitAssertAttr(const AssertAttr *_Attr,
                                                                    /*Offset=*/0, SM, CGM.getLangOpts()));
     StringRef __comment(S, E-S);
 
+    // __func is the function name as it appears on the source code (if needed, remove '__unchk_' prefix)
+    StringRef __func{cast<FunctionDecl>(CurFuncDecl)->getNameAsString()};
+    if (CurFuncDecl->isImplicit())
+      __func.consume_front(CXX__UNCHK_FN_PREFIX);
+
     // Register a std::contract_violation object in `__contract_violation_tab[]'
     llvm::APInt I = CGM.Register_contract_violation(_Attr->getLocation(),
-                                                    cast<FunctionDecl>(CurFuncDecl)->getNameAsString(),
-                                                    __comment, Level);
+                                                    __func.str(), __comment, Level);
     IntegerLiteral *IL = IntegerLiteral::Create(C, I, C.IntTy, SourceLocation());
 
     // Add argument of type `const __builtin_contract_violation&' to the Args vector
