@@ -2745,6 +2745,10 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
       ________ret________->setType(RetTy);
   }
 
+  // Required to merge expects/ensures attributes for out-of-line member function definitions
+  CXXThisScopeRAII ThisScope(*this, dyn_cast_or_null<RecordDecl>(New->getDeclContext()),
+                             /*TypeQuals=*/0, New->isCXXInstanceMember());
+
   for (auto *I : Old->specific_attrs<InheritableAttr>()) {
     // Ignore deprecated/unavailable/availability attributes if requested.
     AvailabilityMergeKind LocalAMK = AMK_None;
