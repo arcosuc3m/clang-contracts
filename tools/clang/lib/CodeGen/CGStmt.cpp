@@ -19,6 +19,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Sema/LoopHint.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -572,8 +573,9 @@ void CodeGenFunction::EmitAssertAttr(const AssertAttr *_Attr,
     // __comment is the expression as written in the source code
     auto &SM = C.getSourceManager();
     const char *S = SM.getCharacterData(_Attr->getCond()->getLocStart()),
-               *E = SM.getCharacterData(_Attr->getCond()->getLocEnd());
-    StringRef __comment(S, (E-S)+1);
+               *E = SM.getCharacterData(Lexer::getLocForEndOfToken(_Attr->getCond()->getLocEnd(),
+                                                                   /*Offset=*/0, SM, CGM.getLangOpts()));
+    StringRef __comment(S, E-S);
 
     // Register a std::contract_violation object in `__contract_violation_tab[]'
     llvm::APInt I = CGM.Register_contract_violation(_Attr->getLocation(),
