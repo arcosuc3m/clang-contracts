@@ -23,11 +23,14 @@ the P0542R5 techinical specification, for [Support for contract based programmin
 in C++](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0542r5.html), recently
 approved by the ISO C++ comitee to be part of C++20.
 
-This implementation of P0542R5 was authored and maintained by Javier López-Gómez.
+This implementation of P0542R5 was authored and maintained by Javier López-Gómez, with
+notable contributions from José Cabrero Holgueras (jcabrero).
 
-As of Mon Jul 9 2018, this is a work in progress: if you find a bug/unexpected behaviour,
-please file a bug in the project page. However, it is quite complete (see below for a list
-of missing features).
+As of Mon Jul 9 2018, this is a work in progress, however it is quite complete (see
+below for a list of missing features).
+
+If you find a bug/unexpected behaviour, please file a bug in the project page. You can
+also try to fix it and post a patch or pull request.
 
 # Build instructions of LLVM + Clang
 Provided that you have the required dependencies already installed in your machine, just
@@ -40,8 +43,8 @@ $ cmake -G "Unix Makefiles" -DLLVM_USE_LINKER=gold -DBUILD_SHARED_LIBS=ON -DLLVM
 $ make -j8
 ```
 
-For additional build instruction see the (Clang project page)[http://clang.llvm.org/] and
-the (Getting Started)[http://clang.llvm.org/get_started.html] guide.
+For additional build instruction see the [Clang project page](http://clang.llvm.org/) and
+the [Getting Started](http://clang.llvm.org/get_started.html) guide.
 
 # Command line options
 Three new options were added to the Clang driver: `-build-level=`, `-contract-violation-handler=`
@@ -75,7 +78,7 @@ int main(int argc, char *argv[]) {
 ```
 
 # Known problems
-See the (Issues)[https://github.com/arcosuc3m/clang-contracts/issues] page. If you have found
+See the [Issues](https://github.com/arcosuc3m/clang-contracts/issues) page. If you have found
 a new (undocumented) issue, please add it to the tracker.
 
 # TO DO
@@ -88,3 +91,9 @@ merged into the most recent redeclaration.
 > bodies, default arguments, noexcept-specifiers, and default member initializers, and
 > contract conditions (10.6.11 [dcl.attr.contracts]).
 - Handle inheritance of [[expects]] and [[ensures]] attributes as per the P0542R5 TS.
+
+Also, these features may be added to improve the quality of the implementation (not required 
+by the TS):
+- Conditional expressions that are part of contract attributes may be assumed to be true, even
+if the build mode is off (as if `__builtin_assume()` was specified).
+- Static evaluation of contracts (if possible).
