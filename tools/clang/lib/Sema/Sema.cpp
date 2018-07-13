@@ -329,10 +329,10 @@ void Sema::Initialize() {
     PushOnScopeChains(Context.getBuiltinVaListDecl(), TUScope);
 
   // Declarations for C++ contract support (D0542R2)
-  if (getLangOpts().CPlusPlus) {
-    if (IdResolver.begin(&Context.Idents.get("__builtin_contract_violation")) == IdResolver.end())
-      PushOnScopeChains(Context.getBuiltinContractViolationType()->getAs<TypedefType>()->getDecl(),
-                        TUScope);
+  if (getLangOpts().CPlusPlus
+      && IdResolver.begin(&Context.Idents.get("__builtin_contract_violation_t")) == IdResolver.end()) {
+    PushOnScopeChains(Context.getBuiltinContractViolationType()->getAs<TypedefType>()->getDecl(),
+                      TUScope);
 
     if (getLangOpts().BuildLevel == 0 /*off*/)
       return;

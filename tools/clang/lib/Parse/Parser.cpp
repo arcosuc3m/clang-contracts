@@ -473,6 +473,9 @@ void Parser::Initialize() {
   if (getLangOpts().AltiVec)
     Ident_pixel = &PP.getIdentifierTable().get("pixel");
 
+  Ident_axiom = nullptr;
+  Ident_________ret________ = nullptr;
+
   Ident_introduced = nullptr;
   Ident_deprecated = nullptr;
   Ident_obsoleted = nullptr;
