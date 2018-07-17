@@ -83,6 +83,7 @@ testing::AssertionResult matchesConditionally(
   // We should consider having a function, at least for tests, that invokes cc1.
   std::vector<std::string> Args(CompileArgs.begin(), CompileArgs.end());
   Args.insert(Args.end(), {"-frtti", "-fexceptions",
+                           "-build-level=off", // injected decls for P0542R5 TS confuse a few tests; disable
                            "-target", "i386-unknown-unknown"});
   if (!runToolOnCodeWithArgs(
           Factory->create(), Code, Args, Filename, "clang-tool",

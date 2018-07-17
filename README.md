@@ -48,10 +48,10 @@ the [Getting Started](http://clang.llvm.org/get_started.html) guide.
 
 # Command line options
 Three new options were added to the Clang driver: `-build-level=`, `-contract-violation-handler=`
-and `-enable-continuation-after-violation`, e.g.
+and `-enable-continue-after-violation`, e.g.
 ```
 $ clang++ -std=c++14 [-build-level=[off|default|audit]] [-contract-violation-handler=my_handler]
-  [-enable-continuation-after-violation] ...
+  [-enable-continue-after-violation] ...
 ```
 
 The `-build-level=` option allows to specify the build level of the translation (P0542R5

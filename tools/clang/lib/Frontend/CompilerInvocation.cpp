@@ -1943,8 +1943,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   if (Arg *A = Args.getLastArg(OPT_contract_violation_handler_EQ))
       Opts.ContractViolationHandler = A->getValue();
   // Handle -enable-continue-after-violation option.
-  if (Arg *A = Args.getLastArg(OPT_enable_continue_after_violation))
-      Opts.EnableContinueAfterViolation = 1;
+  Opts.EnableContinueAfterViolation = Args.hasArg(OPT_enable_continue_after_violation);
 
   // -cl-std only applies for OpenCL language standards.
   // Override the -std option in this case.
