@@ -21,7 +21,11 @@ This repository also contains a clone of the Clang repository (in its SVN revisi
 The Clang code included in this repository includes a prototype implementation of
 the P0542R5 techinical specification, for [Support for contract based programming
 in C++](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0542r5.html), recently
-approved by the ISO C++ comitee to be part of C++20.
+approved by the ISO C++ comitee to be part of C++20.  To see a summary of changes since this project was forked:
+```
+$ BRANCH=master
+$ git diff --stat `git rev-list --reverse $BRANCH | sed -n 2p` $BRANCH
+```
 
 This implementation of P0542R5 was authored and maintained by Javier López-Gómez, with
 notable contributions from José Cabrero Holgueras (jcabrero).
