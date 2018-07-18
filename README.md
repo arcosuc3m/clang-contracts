@@ -58,6 +58,8 @@ $ clang++ -std=c++14 [-build-level=[off|default|audit]] [-contract-violation-han
   [-enable-continue-after-violation] ...
 ```
 
+Because the `contract` header is contained in the tools/clang/lib/Headers/ directory, you will probably need to add the `-idirafter path-to-clang-contracts-repo/tools/clang/lib/Headers/` option.
+
 The `-build-level=` option allows to specify the build level of the translation (P0542R5
 Proposed Wording, Section 10.6.11.12). If unspecified, it defaults to default.
 
