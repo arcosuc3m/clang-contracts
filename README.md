@@ -2,17 +2,16 @@
 This directory and its subdirectories contain source code for LLVM, as it
 looked on Thu Oct 5 2017.  This is the SVN development revision 314972.
 The rest of this section contains the original README.txt of the LLVM project.
-
-LLVM is open source software. You may freely distribute it under the terms of
-the license agreement found in LICENSE.txt.
-
-Please see the documentation provided in docs/ for further
-assistance with LLVM, and in particular docs/GettingStarted.rst for getting
-started with LLVM and docs/README.txt for an overview of LLVM's
-documentation setup.
-
-If you are writing a package for LLVM, see docs/Packaging.rst for our
-suggestions.
+> LLVM is open source software. You may freely distribute it under the terms of
+> the license agreement found in LICENSE.txt.
+> 
+> Please see the documentation provided in docs/ for further
+> assistance with LLVM, and in particular docs/GettingStarted.rst for getting
+> started with LLVM and docs/README.txt for an overview of LLVM's
+> documentation setup.
+> 
+> If you are writing a package for LLVM, see docs/Packaging.rst for our
+> suggestions.
 
 # Clang C/C++/ObjectiveC frontend
 This repository also contains a clone of the Clang repository (in its SVN revision
@@ -26,9 +25,6 @@ approved by the ISO C++ comitee to be part of C++20.  To see a summary of change
 $ BRANCH=master
 $ git diff --stat `git rev-list --reverse $BRANCH | sed -n 2p` $BRANCH
 ```
-
-This implementation of P0542R5 was authored and maintained by Javier López-Gómez, with
-notable contributions from José Cabrero Holgueras (jcabrero).
 
 As of Mon Jul 9 2018, this is a work in progress, however it is quite complete (see
 below for a list of missing features).
@@ -103,3 +99,8 @@ by the TS):
 - Conditional expressions that are part of contract attributes may be assumed to be true, even
 if the build mode is off (as if `__builtin_assume()` was specified).
 - Static evaluation of contracts (if possible).
+
+# Authors
+This implementation of the P0542R5 TS was authored and maintained by Javier López-Gómez
+(jalopezg [at] inf.uc3m.es), with notable contributions from José Cabrero Holgueras
+(jcabrero [at] inf.uc3m.es).
