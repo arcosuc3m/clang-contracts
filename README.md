@@ -1,4 +1,6 @@
-# Low Level Virtual Machine (LLVM)
+# Experimental Clang support for contract based programming in C++ (P0542R5 TS)
+[![HitCount](http://hits.dwyl.io/arcosuc3m/clang-contracts.svg)](http://hits.dwyl.io/arcosuc3m/clang-contracts)
+## Low Level Virtual Machine (LLVM)
 This directory and its subdirectories contain source code for LLVM, as it
 looked on Thu Oct 5 2017.  This is the SVN development revision 314972.
 The rest of this section contains the original README.txt of the LLVM project.
@@ -13,7 +15,7 @@ The rest of this section contains the original README.txt of the LLVM project.
 > If you are writing a package for LLVM, see docs/Packaging.rst for our
 > suggestions.
 
-# Clang C/C++/ObjectiveC frontend
+## Clang C/C++/ObjectiveC frontend
 This repository also contains a clone of the Clang repository (in its SVN revision
 314964, dated Thu Oct 5 2017) under the `tools/clang` directory.
 
@@ -32,7 +34,7 @@ below for a list of missing features).
 If you find a bug/unexpected behaviour, please file a bug in the project page. You can
 also try to fix it and post a patch or pull request.
 
-# Build instructions of LLVM + Clang
+## Build instructions of LLVM + Clang
 Provided that you have the required dependencies already installed in your machine, just
 run the following commands:
 ``` 
@@ -46,7 +48,7 @@ $ make -j8
 For additional build instruction see the [Clang project page](http://clang.llvm.org/) and
 the [Getting Started](http://clang.llvm.org/get_started.html) guide.
 
-# Command line options
+## Command line options
 Three new options were added to the Clang driver: `-build-level=`, `-contract-violation-handler=`
 and `-enable-continue-after-violation`, e.g.
 ```
@@ -62,7 +64,7 @@ Proposed Wording, Section 10.6.11.12). If unspecified, it defaults to default.
 The other two options allow specifying a custom violation handler and the violation
 continuation mode, as per Section 10.6.11.16 and 10.6.11.18 of the current wording.
 
-# MWE with C++ contracts
+## MWE with C++ contracts
 Remember that contract attribute spelling is quite different from that of CXX11, e.g.
 `[[attribute contract-level-opt identifier-opt: conditional-expression]]`.
 
@@ -79,11 +81,11 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-# Known problems
+## Known problems
 See the [Issues](https://github.com/arcosuc3m/clang-contracts/issues) page. If you have found
 a new (undocumented) issue, please add it to the tracker.
 
-# TO DO
+## TO DO
 As of Jul 9 2018, the implementation is quite complete only missing a few features, namely:
 - P0542R5 Section 2.3, Contracts repetition: currently, expects/ensures attributes are
 merged into the most recent redeclaration.
@@ -100,7 +102,7 @@ by the TS):
 if the build mode is off (as if `__builtin_assume()` was specified).
 - Static evaluation of contracts (if possible).
 
-# Authors
+## Authors
 This implementation of the P0542R5 TS was authored and maintained by Javier López-Gómez
 (jalopezg [at] inf.uc3m.es), with notable contributions from José Cabrero Holgueras
 (jcabrero [at] inf.uc3m.es).
