@@ -1,5 +1,5 @@
 # Experimental Clang support for contract based programming in C++ (P0542R5 TS)
-[![HitCount](http://hits.dwyl.io/arcosuc3m/clang-contracts.svg)](http://hits.dwyl.io/arcosuc3m/clang-contracts)
+[![HitCount](http://hits.dwyl.io/arcosuc3m/clang-contracts.svg)](http://hits.dwyl.io/arcosuc3m/clang-contracts) <a href="http://fragata.arcos.inf.uc3m.es/#"><img src="http://fragata.arcos.inf.uc3m.es/dist/assets/site-logo.3f5bcf90b56ade7be40ffa8cca8b2056.svg" height="20" alt="Compiler Explorer (godbolt) site that can be used for testing (regularly updated with master branch)"/></a>
 ## Low Level Virtual Machine (LLVM)
 This directory and its subdirectories contain source code for LLVM, as it
 looked on Thu Oct 5 2017.  This is the SVN development revision 314972.
