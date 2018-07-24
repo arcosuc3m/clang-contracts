@@ -183,11 +183,13 @@ namespace {
     StringRef attrName;
     bool isOpt;
     bool Fake;
+    bool InstantiateAsUnevaluated; // see ../../include/clang/Basic/Attr.td for a description
 
   public:
     Argument(const Record &Arg, StringRef Attr)
       : lowerName(Arg.getValueAsString("Name")), upperName(lowerName),
-        attrName(Attr), isOpt(false), Fake(false) {
+        attrName(Attr), isOpt(false), Fake(false),
+        InstantiateAsUnevaluated(Arg.getValueAsBit("InstantiateAsUnevaluated")) {
       if (!lowerName.empty()) {
         lowerName[0] = std::tolower(lowerName[0]);
         upperName[0] = std::toupper(upperName[0]);
@@ -199,6 +201,7 @@ namespace {
         lowerName = "interface_";
     }
     virtual ~Argument() = default;
+    bool isUnevaluated() const { return InstantiateAsUnevaluated; }
 
     StringRef getLowerName() const { return lowerName; }
     StringRef getUpperName() const { return upperName; }
@@ -1054,7 +1057,8 @@ namespace {
       OS << "      " << getType() << " tempInst" << getUpperName() << ";\n";
       OS << "      {\n";
       OS << "        EnterExpressionEvaluationContext "
-         << "Unevaluated(S, Sema::ExpressionEvaluationContext::Unevaluated);\n";
+         << "Unevaluated(S, Sema::ExpressionEvaluationContext::"
+         << (isUnevaluated() ? "Unevaluated);\n" : "PotentiallyEvaluated);\n");
       OS << "        ExprResult " << "Result = S.SubstExpr("
          << "A->get" << getUpperName() << "(), TemplateArgs);\n";
       OS << "        tempInst" << getUpperName() << " = "
@@ -1101,7 +1105,8 @@ namespace {
          << "[A->" << getLowerName() << "_size()];\n";
       OS << "      {\n";
       OS << "        EnterExpressionEvaluationContext "
-         << "Unevaluated(S, Sema::ExpressionEvaluationContext::Unevaluated);\n";
+         << "Unevaluated(S, Sema::ExpressionEvaluationContext::"
+         << (isUnevaluated() ? "Unevaluated);\n" : "PotentiallyEvaluated);\n");
       OS << "        " << getType() << " *TI = tempInst" << getUpperName()
          << ";\n";
       OS << "        " << getType() << " *I = A->" << getLowerName()

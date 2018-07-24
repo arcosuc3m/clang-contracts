@@ -131,13 +131,16 @@ def HasFunctionProto : SubsetSubject<DeclBase,
                                        isa<BlockDecl>(S)}]>;
 
 // A single argument to an attribute
-class Argument<string name, bit optional, bit fake = 0> {
+class Argument<string name, bit optional, bit fake = 0, bit uneval = 1> {
   string Name = name;
   bit Optional = optional;
 
   /// A fake argument is used to store and serialize additional information
   /// in an attribute without actually changing its parsing or pretty-printing.
   bit Fake = fake;
+  // Set to true if template-dependent argument should be instantiated in
+  // an unevaluated context.
+  bit InstantiateAsUnevaluated = uneval;
 }
 
 class BoolArgument<string name, bit opt = 0, bit fake = 0> : Argument<name, opt,
@@ -145,7 +148,9 @@ class BoolArgument<string name, bit opt = 0, bit fake = 0> : Argument<name, opt,
 class IdentifierArgument<string name, bit opt = 0> : Argument<name, opt>;
 class IntArgument<string name, bit opt = 0> : Argument<name, opt>;
 class StringArgument<string name, bit opt = 0> : Argument<name, opt>;
-class ExprArgument<string name, bit opt = 0> : Argument<name, opt>;
+class ExprArgument<string name, bit opt = 0, bit uneval = 1> : Argument<name,
+                                                                        opt, 0,
+                                                                        uneval>;
 class FunctionArgument<string name, bit opt = 0, bit fake = 0> : Argument<name,
                                                                           opt,
                                                                           fake>;
@@ -1010,7 +1015,7 @@ def Expects : InheritableAttr {
   let Spellings = [CXX11<"", "expects", 201603>];
   let Subjects = SubjectList<[Function]>;
   let Args = [IdentifierArgument<"Level">,
-              ExprArgument<"Cond">,
+              ExprArgument<"Cond", 0, /*uneval*/ 0>,
               BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
               NamedArgument<"Parent", 0, /*fake*/ 1>];
   let AdditionalMembers = [{ void setCond(Expr *E) { cond = E; } }];
@@ -1025,7 +1030,7 @@ def Ensures : InheritableAttr {
   let Spellings = [CXX11<"", "ensures", 201603>];
   let Subjects = SubjectList<[Function]>;
   let Args = [IdentifierArgument<"Level">,
-              ExprArgument<"Cond">,
+              ExprArgument<"Cond", 0, /*uneval*/ 0>,
               IdentifierArgument<"Ret">,
               BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
               NamedArgument<"Parent", 0, /*fake*/ 1>];
