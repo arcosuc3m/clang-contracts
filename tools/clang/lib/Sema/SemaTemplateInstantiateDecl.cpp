@@ -182,14 +182,15 @@ static void instantiateDependentAllocAlignAttr(
                       Align->getSpellingListIndex());
 }
 
-static Expr *instantiateDependentFunctionAttrCondition(
+// __instantiateDependentFunctionAttrCondition does not check for diag::err_attr_cond_never_constant_expr
+static Expr *__instantiateDependentFunctionAttrCondition(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
-    const Attr *A, Expr *OldCond, const Decl *Tmpl, FunctionDecl *New) {
+    const Attr *A, Expr *OldCond, const Decl *Tmpl, FunctionDecl *New,
+    Sema::ExpressionEvaluationContext EC) {
   Expr *Cond = nullptr;
   {
     Sema::ContextRAII SwitchContext(S, New);
-    EnterExpressionEvaluationContext Unevaluated(
-        S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+    EnterExpressionEvaluationContext Unevaluated(S, EC);
     ExprResult Result = S.SubstExpr(OldCond, TemplateArgs);
     if (Result.isInvalid())
       return nullptr;
@@ -201,9 +202,17 @@ static Expr *instantiateDependentFunctionAttrCondition(
       return nullptr;
     Cond = Converted.get();
   }
+  return Cond;
+}
+
+static Expr *instantiateDependentFunctionAttrCondition(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const Attr *A, Expr *OldCond, const Decl *Tmpl, FunctionDecl *New,
+    Sema::ExpressionEvaluationContext EC = Sema::ExpressionEvaluationContext::ConstantEvaluated) {
+  Expr *Cond = __instantiateDependentFunctionAttrCondition(S, TemplateArgs, A, OldCond, Tmpl, New, EC);
 
   SmallVector<PartialDiagnosticAt, 8> Diags;
-  if (OldCond->isValueDependent() && !Cond->isValueDependent() &&
+  if (OldCond->isValueDependent() && Cond && !Cond->isValueDependent() &&
       !Expr::isPotentialConstantExprUnevaluated(Cond, New, Diags)) {
     S.Diag(A->getLocation(), diag::err_attr_cond_never_constant_expr) << A;
     for (const auto &P : Diags)
@@ -411,6 +420,30 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     if (const auto *DiagnoseIf = dyn_cast<DiagnoseIfAttr>(TmplAttr)) {
       instantiateDependentDiagnoseIfAttr(*this, TemplateArgs, DiagnoseIf, Tmpl,
                                          cast<FunctionDecl>(New));
+      continue;
+    }
+
+    // FIXME: overriding instatiation code from include/clang/Basic/Attr.td
+    // (required changes to utils/TableGen/ClangAttrEmitter.cpp) was not a bad
+    // idea.  All these attributes are candidates to be ported in the future.
+    //
+    // In the interim, [[expects]] and [[ensures]] condictions are instantiated here.
+    if (const auto *A = dyn_cast<ExpectsAttr>(TmplAttr)) {
+      if (Expr *E = __instantiateDependentFunctionAttrCondition(*this,
+             TemplateArgs, A, A->getCond(), Tmpl, cast<FunctionDecl>(New),
+             Sema::ExpressionEvaluationContext::PotentiallyEvaluated))
+        New->addAttr(new (Context) ExpectsAttr(A->getLocation(), Context,
+                                    A->getLevel(), E, A->getArgDependent(),
+                                    A->getParent(), A->getSpellingListIndex()));
+      continue;
+    }
+    if (const auto *A = dyn_cast<EnsuresAttr>(TmplAttr)) {
+      if (Expr *E = __instantiateDependentFunctionAttrCondition(*this,
+             TemplateArgs, A, A->getCond(), Tmpl, cast<FunctionDecl>(New),
+             Sema::ExpressionEvaluationContext::PotentiallyEvaluated))
+        New->addAttr(new (Context) EnsuresAttr(A->getLocation(), Context,
+                                    A->getLevel(), E, A->getRet(), A->getArgDependent(),
+                                    A->getParent(), A->getSpellingListIndex()));
       continue;
     }
 

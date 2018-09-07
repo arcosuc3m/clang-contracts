@@ -131,16 +131,13 @@ def HasFunctionProto : SubsetSubject<DeclBase,
                                        isa<BlockDecl>(S)}]>;
 
 // A single argument to an attribute
-class Argument<string name, bit optional, bit fake = 0, bit uneval = 1> {
+class Argument<string name, bit optional, bit fake = 0> {
   string Name = name;
   bit Optional = optional;
 
   /// A fake argument is used to store and serialize additional information
   /// in an attribute without actually changing its parsing or pretty-printing.
   bit Fake = fake;
-  // Set to true if template-dependent argument should be instantiated in
-  // an unevaluated context.
-  bit InstantiateAsUnevaluated = uneval;
 }
 
 class BoolArgument<string name, bit opt = 0, bit fake = 0> : Argument<name, opt,
@@ -148,9 +145,7 @@ class BoolArgument<string name, bit opt = 0, bit fake = 0> : Argument<name, opt,
 class IdentifierArgument<string name, bit opt = 0> : Argument<name, opt>;
 class IntArgument<string name, bit opt = 0> : Argument<name, opt>;
 class StringArgument<string name, bit opt = 0> : Argument<name, opt>;
-class ExprArgument<string name, bit opt = 0, bit uneval = 1> : Argument<name,
-                                                                        opt, 0,
-                                                                        uneval>;
+class ExprArgument<string name, bit opt = 0> : Argument<name, opt>;
 class FunctionArgument<string name, bit opt = 0, bit fake = 0> : Argument<name,
                                                                           opt,
                                                                           fake>;
@@ -403,8 +398,6 @@ class Attr {
   bit Clone = 1;
   // Set to true for attributes which must be instantiated within templates
   bit TemplateDependent = 0;
-  // Any additional text that should be included verbatim in the generated instantiateTemplateAttribute() function.
-  code AdditionalInstantiationCode = [{}];
   // Set to true for attributes that have a corresponding AST node.
   bit ASTNode = 1;
   // Set to true for attributes which have handler in Sema.
@@ -1015,14 +1008,13 @@ def Expects : InheritableAttr {
   let Spellings = [CXX11<"", "expects", 201603>];
   let Subjects = SubjectList<[Function]>;
   let Args = [IdentifierArgument<"Level">,
-              ExprArgument<"Cond", 0, /*uneval*/ 0>,
+              ExprArgument<"Cond">,
               BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
               NamedArgument<"Parent", 0, /*fake*/ 1>];
-  let AdditionalMembers = [{ void setCond(Expr *E) { cond = E; } }];
   let DuplicatesAllowedWhileMerging = 1;
   let LateParsed = 1;
   let TemplateDependent = 1;
-  let AdditionalInstantiationCode = [{ if (!tempInstCond->isTypeDependent()) { ExprResult ER = S.PerformContextuallyConvertToBool(tempInstCond); if (ER.isUsable()) tempInstCond = ER.get(); } }];
+//  for instantiation code, see lib/Sema/SemaTemplateInstantiateDecl.cpp, function Sema::InstantiateAttrs()
   let Documentation = [Undocumented];
 }
 
@@ -1030,7 +1022,7 @@ def Ensures : InheritableAttr {
   let Spellings = [CXX11<"", "ensures", 201603>];
   let Subjects = SubjectList<[Function]>;
   let Args = [IdentifierArgument<"Level">,
-              ExprArgument<"Cond", 0, /*uneval*/ 0>,
+              ExprArgument<"Cond">,
               IdentifierArgument<"Ret">,
               BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
               NamedArgument<"Parent", 0, /*fake*/ 1>];
@@ -1038,7 +1030,7 @@ def Ensures : InheritableAttr {
   let DuplicatesAllowedWhileMerging = 1;
   let LateParsed = 1;
   let TemplateDependent = 1;
-  let AdditionalInstantiationCode = [{ if (!tempInstCond->isTypeDependent()) { ExprResult ER = S.PerformContextuallyConvertToBool(tempInstCond); if (ER.isUsable()) tempInstCond = ER.get(); } }];
+//  for instantiation code, see lib/Sema/SemaTemplateInstantiateDecl.cpp, function Sema::InstantiateAttrs()
   let Documentation = [Undocumented];
 }
 

@@ -183,13 +183,11 @@ namespace {
     StringRef attrName;
     bool isOpt;
     bool Fake;
-    bool InstantiateAsUnevaluated; // see ../../include/clang/Basic/Attr.td for a description
 
   public:
     Argument(const Record &Arg, StringRef Attr)
       : lowerName(Arg.getValueAsString("Name")), upperName(lowerName),
-        attrName(Attr), isOpt(false), Fake(false),
-        InstantiateAsUnevaluated(Arg.getValueAsBit("InstantiateAsUnevaluated")) {
+        attrName(Attr), isOpt(false), Fake(false) {
       if (!lowerName.empty()) {
         lowerName[0] = std::tolower(lowerName[0]);
         upperName[0] = std::toupper(upperName[0]);
@@ -201,7 +199,6 @@ namespace {
         lowerName = "interface_";
     }
     virtual ~Argument() = default;
-    bool isUnevaluated() const { return InstantiateAsUnevaluated; }
 
     StringRef getLowerName() const { return lowerName; }
     StringRef getUpperName() const { return upperName; }
@@ -1057,8 +1054,7 @@ namespace {
       OS << "      " << getType() << " tempInst" << getUpperName() << ";\n";
       OS << "      {\n";
       OS << "        EnterExpressionEvaluationContext "
-         << "Unevaluated(S, Sema::ExpressionEvaluationContext::"
-         << (isUnevaluated() ? "Unevaluated);\n" : "PotentiallyEvaluated);\n");
+         << "Unevaluated(S, Sema::ExpressionEvaluationContext::Unevaluated);\n";
       OS << "        ExprResult " << "Result = S.SubstExpr("
          << "A->get" << getUpperName() << "(), TemplateArgs);\n";
       OS << "        tempInst" << getUpperName() << " = "
@@ -1105,8 +1101,7 @@ namespace {
          << "[A->" << getLowerName() << "_size()];\n";
       OS << "      {\n";
       OS << "        EnterExpressionEvaluationContext "
-         << "Unevaluated(S, Sema::ExpressionEvaluationContext::"
-         << (isUnevaluated() ? "Unevaluated);\n" : "PotentiallyEvaluated);\n");
+         << "Unevaluated(S, Sema::ExpressionEvaluationContext::Unevaluated);\n";
       OS << "        " << getType() << " *TI = tempInst" << getUpperName()
          << ";\n";
       OS << "        " << getType() << " *I = A->" << getLowerName()
@@ -2938,7 +2933,6 @@ void EmitClangAttrTemplateInstantiateHelper(const std::vector<Record *> &Attrs,
 
     for (auto const &ai : Args)
       ai->writeTemplateInstantiation(OS);
-    OS << R.getValueAsString("AdditionalInstantiationCode");
 
     OS << "      return new (C) " << R.getName() << "Attr(A->getLocation(), C";
     for (auto const &ai : Args) {
