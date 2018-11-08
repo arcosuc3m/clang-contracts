@@ -50,7 +50,8 @@ set(TSAN_SOURCES
   rtl/tsan_stat.cc
   rtl/tsan_suppressions.cc
   rtl/tsan_symbolize.cc
-  rtl/tsan_sync.cc)
+  rtl/tsan_sync.cc
+  rtl/tsan_csv.cc)
 
 set(TSAN_CXX_SOURCES
   rtl/tsan_new_delete.cc)
@@ -94,7 +95,8 @@ set(TSAN_HEADERS
   rtl/tsan_sync.h
   rtl/tsan_trace.h
   rtl/tsan_update_shadow_word_inl.h
-  rtl/tsan_vector.h)
+  rtl/tsan_vector.h
+  rtl/tsan_csv.h)
 
 set(TSAN_RUNTIME_LIBRARIES)
 add_compiler_rt_component(tsan)
@@ -219,6 +221,7 @@ if(COMPILER_RT_HAS_SYSROOT_FLAG AND NOT CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
   set_source_files_properties(${_tsan_generic_sources}
     PROPERTIES COMPILE_FLAGS "--sysroot=.")
 endif()
+set_source_files_properties(rtl/tsan_csv.cc PROPERTIES COMPILE_FLAGS "-std=c++14 -DNO_CONTRACT_H")
 
 # Build libcxx instrumented with TSan.
 if(COMPILER_RT_HAS_LIBCXX_SOURCES AND

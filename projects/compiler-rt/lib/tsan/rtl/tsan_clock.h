@@ -16,6 +16,7 @@
 #include "tsan_defs.h"
 #include "tsan_dense_alloc.h"
 
+namespace csv { struct event_set_impl; }
 namespace __tsan {
 
 typedef DenseSlabAlloc<ClockBlock, 1<<16, 1<<10> ClockAlloc;
@@ -144,10 +145,16 @@ class ThreadClock {
   void DebugDump(int(*printf)(const char *s, ...));
 
  private:
+  friend struct csv::event_set_impl;        // jalopezg: CSV requires this
+  ThreadClock() = default;
+  ThreadClock& operator=(const ThreadClock& rhs)
+  { internal_memcpy(this, &rhs, sizeof(ThreadClock));
+    return *this; };
+
   static const uptr kDirtyTids = SyncClock::kDirtyTids;
   // Index of the thread associated with he clock ("current thread").
-  const unsigned tid_;
-  const unsigned reused_;  // tid_ reuse count.
+  unsigned tid_;
+  unsigned reused_;  // tid_ reuse count.
   // Current thread time when it acquired something from other threads.
   u64 last_acquire_;
 
