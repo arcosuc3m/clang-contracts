@@ -1254,14 +1254,15 @@ SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D, FunctionDecl 
   ________ret________->setInitStyle(VarDecl::CInit);
 
   // build the return statement
-  DeclRefExpr *DRE = new (Context) DeclRefExpr(________ret________, false,
-                                               ________ret________->getType(),
-                                               VK_LValue, ISL);
-  ReturnStmt *RS = new (Context)
-                   ReturnStmt(ISL, ImplicitCastExpr::Create(Context,
-                                             ________ret________->getType(),
-                                             CK_LValueToRValue, DRE, nullptr, VK_RValue),
-                              nullptr);
+  QualType T = ________ret________->getType();
+  QualType NRT = T->isReferenceType() ? T.getNonReferenceType() : T;
+
+  Expr *DRE = new (Context) DeclRefExpr(________ret________, false, NRT,
+					VK_LValue, ISL);
+  if (!T->isReferenceType()) // Fixes issue #10.  RATIONALE: see above
+    DRE = ImplicitCastExpr::Create(Context, NRT, CK_LValueToRValue, DRE, nullptr,
+				   VK_RValue);
+  ReturnStmt *RS = new (Context) ReturnStmt(ISL, DRE, nullptr);
 
   // return the body: precondition checks + call __unchk function (inlined) + postcondition checks
   SmallVector<Stmt *, 4> S;
