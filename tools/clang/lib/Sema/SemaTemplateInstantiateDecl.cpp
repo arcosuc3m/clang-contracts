@@ -189,6 +189,9 @@ static Expr *__instantiateDependentFunctionAttrCondition(
     Sema::ExpressionEvaluationContext EC) {
   Expr *Cond = nullptr;
   {
+    S.PushFunctionScope();
+    Sema::FunctionScopeRAII FuncScopeCleanup(S);
+
     Sema::ContextRAII SwitchContext(S, New);
     EnterExpressionEvaluationContext Unevaluated(S, EC);
     ExprResult Result = S.SubstExpr(OldCond, TemplateArgs);
