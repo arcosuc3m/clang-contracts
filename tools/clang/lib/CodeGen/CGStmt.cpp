@@ -572,9 +572,11 @@ void CodeGenFunction::EmitAssertAttr(const AssertAttr *_Attr,
   if (!CGM.getLangOpts().ContractViolationHandler.empty()) {
     // __comment is the expression as written in the source code
     auto &SM = C.getSourceManager();
-    const char *S = SM.getCharacterData(_Attr->getCond()->getLocStart()),
-               *E = SM.getCharacterData(Lexer::getLocForEndOfToken(_Attr->getCond()->getLocEnd(),
-                                                                   /*Offset=*/0, SM, CGM.getLangOpts()));
+    const char *S = SM.getCharacterData(SM.getSpellingLoc(
+					      _Attr->getCond()->getLocStart())),
+      *E = SM.getCharacterData(Lexer::getLocForEndOfToken(SM.getSpellingLoc(
+					      _Attr->getCond()->getLocEnd()),
+                                          /*Offset=*/0, SM, CGM.getLangOpts()));
     StringRef __comment(S, E-S);
 
     // __func is the function name as it appears on the source code (if needed, remove '__unchk_' prefix)

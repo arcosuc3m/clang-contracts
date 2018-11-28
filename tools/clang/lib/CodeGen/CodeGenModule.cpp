@@ -4481,7 +4481,7 @@ llvm::APInt CodeGenModule::Register_contract_violation(SourceLocation Loc, Strin
   /// construct InitListExpr for a __builtin_contract_violation_t object
   SmallVector<Expr *, 5> Vec;
 
-  FullSourceLoc FSL = Context.getFullLoc(Loc);
+  FullSourceLoc FSL = Context.getFullLoc(Loc).getExpansionLoc();
   StringRef File = FSL.getFileEntry()->getName();
   // __line
   Vec.push_back(IntegerLiteral::Create(Context, llvm::APInt(32, FSL.getLineNumber()), Context.IntTy,
