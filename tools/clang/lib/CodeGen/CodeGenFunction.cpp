@@ -1220,14 +1220,14 @@ shouldUseUndefinedBehaviorReturnOptimization(const FunctionDecl *FD,
 /// SynthesizeCheckedFunctionBody - generates the body of a function that checks
 /// the preconditions(expects)/postconditions(ensures) and calls the '__unchk' function
 static Stmt *
-SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D, FunctionDecl *D_unchk) {
+SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D_body, FunctionDecl *D_chk) {
   ASTContext &Context = CGM.getContext();
   SourceLocation ISL;
   SmallVector<Attr*, 8> AS_expects, AS_ensures;
-  VarDecl *________ret________ = D_unchk->GetInternalReturnVarDecl();
+  VarDecl *________ret________ = D_chk->GetInternalReturnVarDecl();
 
   // translate 'expects'/'ensures' attributes into 'assert'
-  for (const auto *Attr : D_unchk->getAttrs()) {
+  for (const auto *Attr : D_chk->getAttrs()) {
     if (const ExpectsAttr *_Attr = dyn_cast<ExpectsAttr>(Attr)) {
       AS_expects.push_back(AssertAttr::CreateImplicit(Context, _Attr->getLevel(), _Attr->getCond(),
                                                     _Attr->getLocation()));
@@ -1239,7 +1239,7 @@ SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D, FunctionDecl 
 
   // build the parameter list for function call
   SmallVector<Expr*, 8> Args;
-  for (auto &P : D->parameters()) {
+  for (auto &P : D_body->parameters()) {
     QualType T = P->getType();
     QualType NRT = T->isReferenceType() ? T.getNonReferenceType() : T;
 
@@ -1249,7 +1249,7 @@ SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D, FunctionDecl 
 
     Args.push_back(DRE);
   }
-  CallExpr *CE = CGM.SynthesizeCallToFunctionDecl(&Context, D, Args);
+  CallExpr *CE = CGM.SynthesizeCallToFunctionDecl(&Context, D_body, Args);
   ________ret________->setInit(CE);
   ________ret________->setInitStyle(VarDecl::CInit);
 
@@ -1262,7 +1262,11 @@ SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D, FunctionDecl 
   if (!T->isReferenceType()) // Fixes issue #10.  RATIONALE: see above
     DRE = ImplicitCastExpr::Create(Context, NRT, CK_LValueToRValue, DRE, nullptr,
 				   VK_RValue);
-  ReturnStmt *RS = new (Context) ReturnStmt(ISL, DRE, nullptr);
+  // VarDecl::isNRVOVariable() documentation excerpt: "The named return value
+  // optimization (NRVO) works by marking certain non-volatile local variables
+  // of class type as NRVO objects. [...]"
+  ________ret________->setNRVOVariable(!T.isVolatileQualified() && T->isClassType());
+  ReturnStmt *RS = new (Context) ReturnStmt(ISL, DRE, /*NRVOCandidate=*/________ret________);
 
   // return the body: precondition checks + call __unchk function (inlined) + postcondition checks
   SmallVector<Stmt *, 4> S;
@@ -1270,16 +1274,16 @@ SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D, FunctionDecl 
     S.push_back(AttributedStmt::Create(Context, ISL, AS_expects,
                                        new (Context) NullStmt(ISL)));
 
-  S.push_back(D->getReturnType() != Context.VoidTy
-                                        ? static_cast<Stmt *>(new (Context) DeclStmt(
-                                              DeclGroupRef(________ret________), ISL, ISL))
-                                        : static_cast<Stmt *>(CE));
+  S.push_back(D_body->getReturnType() != Context.VoidTy
+	                           ? static_cast<Stmt *>(new (Context) DeclStmt(
+					DeclGroupRef(________ret________), ISL, ISL))
+                                   : static_cast<Stmt *>(CE));
 
   if (AS_ensures.size())
     S.push_back(AttributedStmt::Create(Context, ISL, AS_ensures,
                                        new (Context) NullStmt(ISL)));
 
-  if (D->getReturnType() != Context.VoidTy)
+  if (D_body->getReturnType() != Context.VoidTy)
     S.push_back(RS);
   return new (Context) CompoundStmt(Context, S, ISL, ISL);
 }
@@ -1298,8 +1302,9 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                              + FD->getNameAsString());
     FunctionDecl *unchk_FD, *_D = const_cast<FunctionDecl *>(FD);
 
-    // Make a clone of the original FunctionDecl, but adds the CXX__UNCHK_FN_PREFIX
-    // suffix to the name.  Differentiates type (member/non-member function).
+    // Make a (partial) copy of the original CXXMethodDecl/FunctionDecl, but add
+    // the CXX__UNCHK_FN_PREFIX suffix to the name.
+    // For CXXMethodDecl, don't care if it is a CXX{Constructor,Destructor}Decl.
     if (isa<CXXMethodDecl>(_D)) {
       unchk_FD = CXXMethodDecl::Create(getContext(),
                     cast<CXXRecordDecl>(_D->getDeclContext()), _D->getLocStart(),

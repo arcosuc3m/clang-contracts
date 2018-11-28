@@ -2447,7 +2447,6 @@ VarDecl *Sema::CXXContracts_MakeInternalReturnVarDecl(IdentifierInfo *II) {
                             SourceLocation(), SourceLocation(), II, Context.DependentTy,
                             Context.getTrivialTypeSourceInfo(Context.DependentTy), SC_None);
   VD->setImplicit();
-  VD->setNRVOVariable(true);
   VD->setIsUsed();
   return VD;
 }
