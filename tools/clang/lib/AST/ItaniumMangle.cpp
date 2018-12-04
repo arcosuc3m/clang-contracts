@@ -723,6 +723,10 @@ void CXXNameMangler::mangleFunctionEncodingBareType(const FunctionDecl *FD) {
     FunctionTypeDepth.pop(Saved);
   }
 
+  // P0542R5: vendor extended type qualifier used for unchecked functions.
+  if (FD->isP0542R5_Unchecked())
+    Out << "U9unchecked";
+
   // When mangling an inheriting constructor, the bare function type used is
   // that of the inherited constructor.
   if (auto *CD = dyn_cast<CXXConstructorDecl>(FD))

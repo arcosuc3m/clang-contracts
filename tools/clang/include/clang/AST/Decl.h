@@ -1668,7 +1668,7 @@ private:
   unsigned IsLateTemplateParsed : 1;
   unsigned IsConstexpr : 1;
   unsigned InstantiationIsPending:1;
-  VarDecl *________ret________;
+  unsigned P0542R5_Unchecked : 1;
 
   /// \brief Indicates if the function uses __try.
   unsigned UsesSEHTry : 1;
@@ -1711,6 +1711,9 @@ private:
   /// DNLoc - Provides source/type location info for the
   /// declaration name embedded in the DeclaratorDecl base class.
   DeclarationNameLoc DNLoc;
+
+  /// \brief P0542R5: a local that temporarily stores return value [internal, cached].
+  VarDecl *________ret________;
 
   /// \brief Specify that this function declaration is actually a function
   /// template specialization.
@@ -1763,10 +1766,10 @@ protected:
         IsDeleted(false), IsTrivial(false), IsDefaulted(false),
         IsExplicitlyDefaulted(false), HasImplicitReturnZero(false),
         IsLateTemplateParsed(false), IsConstexpr(isConstexprSpecified),
-        InstantiationIsPending(false), ________ret________(nullptr),
+        InstantiationIsPending(false), P0542R5_Unchecked(false),
         UsesSEHTry(false), HasSkippedBody(false), WillHaveBody(false),
         EndRangeLoc(NameInfo.getEndLoc()), TemplateOrSpecialization(),
-        DNLoc(NameInfo.getInfo()) {}
+        DNLoc(NameInfo.getInfo()), ________ret________(nullptr) {}
 
   typedef Redeclarable<FunctionDecl> redeclarable_base;
   FunctionDecl *getNextRedeclarationImpl() override {
@@ -1972,6 +1975,11 @@ public:
   /// assumption that the instantiation will happen in some other TU.
   bool instantiationIsPending() const { return InstantiationIsPending; }
   void setInstantiationIsPending(bool IC) { InstantiationIsPending = IC; }
+
+  /// \brief Whether this function is the unchecked equivalent of a FunctionDecl
+  ///  that has {Expects,Ensures}Attr.
+  bool isP0542R5_Unchecked() const { return P0542R5_Unchecked; }
+  void setP0542R5_Unchecked(bool U = true) { P0542R5_Unchecked = U; }
 
   /// \brief Indicates the function uses __try.
   bool usesSEHTry() const { return UsesSEHTry; }

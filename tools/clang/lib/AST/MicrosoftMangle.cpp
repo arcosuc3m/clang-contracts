@@ -467,6 +467,11 @@ void MicrosoftCXXNameMangler::mangleFunctionEncoding(const FunctionDecl *FD,
     if (FD->isExternC() && FD->hasAttr<OverloadableAttr>())
       Out << "$$J0";
 
+    // P0542R5: for unchecked functions.  This is not compliant with MSVC++ name
+    // mangling scheme.  Anyway, these symbols are not public.
+    if (FD->isP0542R5_Unchecked())
+      Out << "$U";
+
     mangleFunctionClass(FD);
 
     mangleFunctionType(FT, FD);

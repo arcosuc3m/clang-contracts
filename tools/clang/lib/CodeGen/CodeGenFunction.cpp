@@ -1288,9 +1288,39 @@ SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D_body, Function
   return new (Context) CompoundStmt(Context, S, ISL, ISL);
 }
 
+/// \brief Make a (partial) copy of the original CXXMethodDecl/FunctionDecl. For
+///  CXXMethodDecl, don't care if it is a CXX{Constructor,Destructor}Decl.
+static FunctionDecl *
+PartialCopyFunctionDecl(ASTContext &Context, FunctionDecl *FD) {
+  FunctionDecl *ret;
+  if (isa<CXXMethodDecl>(FD)) {
+    ret = CXXMethodDecl::Create(Context, cast<CXXRecordDecl>(FD->getDeclContext()),
+				FD->getLocStart(), FD->getNameInfo(),
+				FD->getType(), FD->getTypeSourceInfo(),
+				FD->getStorageClass(), FD->isInlineSpecified(),
+				FD->isConstexpr(), FD->getLocEnd());
+  } else {
+    ret = FunctionDecl::Create(Context, FD->getDeclContext(), FD->getLocStart(),
+			       FD->getNameInfo(), FD->getType(), FD->getTypeSourceInfo(),
+			       FD->getStorageClass(), FD->isInlineSpecified(),
+			       FD->hasWrittenPrototype(), FD->isConstexpr());
+  }
+  ret->setImplicit();
+
+  ret->setParams(FD->parameters());
+  ret->setBody(FD->getBody());
+  if (FD->getPrimaryTemplate())
+    ret->setFunctionTemplateSpecialization(FD->getPrimaryTemplate(),
+					   FD->getTemplateSpecializationArgs(),
+					   nullptr);
+  ret->setAccess(FD->getAccess());
+
+  return ret;
+}
+
 void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                                    const CGFunctionInfo &FnInfo) {
-  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
+  FunctionDecl *FD = const_cast<FunctionDecl *>(cast<FunctionDecl>(GD.getDecl()));
   CurGD = GD;
 
   FunctionArgList Args;
@@ -1298,51 +1328,38 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   if (getLangOpts().BuildLevel > 0 // off
       && (FD->hasAttr<ExpectsAttr>() || FD->hasAttr<EnsuresAttr>())) {
-    IdentifierInfo *II = &getContext().Idents.get(CXX__UNCHK_FN_PREFIX
-                             + FD->getNameAsString());
-    FunctionDecl *unchk_FD, *_D = const_cast<FunctionDecl *>(FD);
+    // Make a partial copy (unchk_FD) of the original (FD) function; the copy
+    // has the `P0542R5_Unchecked' bit set, which alters name mangling -see
+    // tools/clang/lib/AST/{Itanium,Microsoft}Mangle.cpp. This symbol is usually
+    // private and is always_inline as part of FD.
+    //
+    //                                      (1)    ,----------.  EmitGlobal()
+    //                                          ,--| unchk_FD |-------------->
+    //                                         ,   `----------'
+    // ,-----------------.                    ,  
+    // | FD (has expects | GenerateCode()    ,     ,----.
+    // |    /ensures)    |--------------->--+--->--| FD |-------->
+    // `-----------------'                    (2)  `----'
+    //                                        Here, FD body has been replaced
+    //                                        by {pre,post}condition checks
+    //                                        and a call to unchk_FD, which is
+    //                                        always_inline. 
+    auto unchk_FD = PartialCopyFunctionDecl(getContext(), FD);
 
-    // Make a (partial) copy of the original CXXMethodDecl/FunctionDecl, but add
-    // the CXX__UNCHK_FN_PREFIX suffix to the name.
-    // For CXXMethodDecl, don't care if it is a CXX{Constructor,Destructor}Decl.
-    if (isa<CXXMethodDecl>(_D)) {
-      unchk_FD = CXXMethodDecl::Create(getContext(),
-                    cast<CXXRecordDecl>(_D->getDeclContext()), _D->getLocStart(),
-                    DeclarationNameInfo(DeclarationName(II), _D->getNameInfo().getLoc()),
-                    _D->getType(), _D->getTypeSourceInfo(), _D->getStorageClass(),
-                    _D->isInlineSpecified(), _D->isConstexpr(), _D->getLocEnd());
-    } else {
-      unchk_FD = FunctionDecl::Create(getContext(),
-                    _D->getDeclContext(), _D->getLocStart(), _D->getNameInfo().getLoc(),
-                    DeclarationName(II), _D->getType(), _D->getTypeSourceInfo(),
-                    _D->getStorageClass(), _D->isInlineSpecified(),
-                    _D->hasWrittenPrototype(), _D->isConstexpr());
-    }
-    unchk_FD->setImplicit();
-    unchk_FD->setParams(_D->parameters());
-    unchk_FD->setAccess(_D->getAccess());
-    unchk_FD->setBody(_D->getBody());
-    _D->getParent()->addDecl(unchk_FD);
-
-    // Emit the '__unchk_' function
+    //FD->getParent()->addDecl(unchk_FD);
+    unchk_FD->setP0542R5_Unchecked();
     CGM.EmitGlobal(unchk_FD);
 
-    // Replaces the body of the original (not yet emitted) function
-    _D->setBody(SynthesizeCheckedFunctionBody(CGM, unchk_FD, _D));
-    _D->dropAttr<ExpectsAttr>();
-    _D->dropAttr<EnsuresAttr>();
+    // (2) Replaces the body of FD
+    FD->setBody(SynthesizeCheckedFunctionBody(CGM, unchk_FD, FD));
+    FD->dropAttr<ExpectsAttr>(), FD->dropAttr<EnsuresAttr>();
   }
 
-  // Sets the AlwaysInline attribute for '__unchk_' functions, so that they
+  // Sets the AlwaysInline attribute for unchecked functions, so that they
   // are inlined as part of the function that checks pre/post-conditions.
-  //
-  // Because it is always inlined, InternalLinkage causes the function to be removed
-  // from the IR.
-  if (FD->isImplicit()
-      && StringRef(FD->getNameAsString()).startswith(CXX__UNCHK_FN_PREFIX)) {
-    Fn->addFnAttr(llvm::Attribute::AlwaysInline);
-    Fn->setLinkage(llvm::Function::InternalLinkage);
-  }
+  // Additionally, InternalLinkage causes the function to be hidden from the IR.
+  if (FD->isP0542R5_Unchecked())
+    Fn->addFnAttr(llvm::Attribute::AlwaysInline), Fn->setLinkage(llvm::Function::InternalLinkage);
 
   // Check if we should generate debug info for this function.
   if (FD->hasAttr<NoDebugAttr>())
