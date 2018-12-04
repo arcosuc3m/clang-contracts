@@ -1930,14 +1930,22 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // Handle -build-level= option.
   if (Arg *A = Args.getLastArg(OPT_build_level_EQ)) {
     unsigned Val = llvm::StringSwitch<unsigned>(A->getValue())
-        .Case("off", 0)
-        .Case("default", 1)
-        .Case("audit", 2)
+        .Case("off", 0).Case("default", 1).Case("audit", 2)
         .Default(~0U);
     if (Val == ~0U)
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << A->getValue();
     else
       Opts.BuildLevel = Val;
+  }
+  // Handle -axiom-mode= option.
+  if (Arg *A = Args.getLastArg(OPT_axiom_mode_EQ)) {
+    unsigned Val = llvm::StringSwitch<unsigned>(A->getValue())
+      .Case("off", 0).Case("on", 1)
+      .Default(~0U);
+    if (Val == ~0U)
+      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << A->getValue();
+    else
+      Opts.AxiomMode = Val;
   }
   // Handle -contract-violation-handler= option.
   if (Arg *A = Args.getLastArg(OPT_contract_violation_handler_EQ))

@@ -170,8 +170,9 @@ COMPATIBLE_LANGOPT(Deprecated        , 1, 0, "__DEPRECATED predefined macro")
 COMPATIBLE_LANGOPT(FastMath          , 1, 0, "fast FP math optimizations, and __FAST_MATH__ predefined macro")
 COMPATIBLE_LANGOPT(FiniteMathOnly    , 1, 0, "__FINITE_MATH_ONLY__ predefined macro")
 COMPATIBLE_LANGOPT(UnsafeFPMath      , 1, 0, "Unsafe Floating Point Math")
-VALUE_LANGOPT(BuildLevel         , 2, 1, "C++ contracts build level") ///< -build-level=off,default,audit
-VALUE_LANGOPT(EnableContinueAfterViolation , 1, 0, "Set the violation continuation mode to on (D0542R2)")
+VALUE_LANGOPT(BuildLevel         , 2, 1, "P0542R5: C++ contract build level") ///< -build-level=off,default,audit
+VALUE_LANGOPT(AxiomMode          , 1, 1, "Axiom mode; if =on, [[{expects,ensures,assert} axiom: ...]] is assumed as if __builtin_assume() was specified") ///< -axiom-mode=off,on
+VALUE_LANGOPT(EnableContinueAfterViolation , 1, 0, "P0542R5: violation continuation mode =on, i.e. do not abort after a contract violation")
 
 BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __weak/__strong ivars")
 

@@ -24,8 +24,7 @@ the P0542R5 techinical specification, for [Support for contract based programmin
 in C++](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0542r5.html), recently
 approved by the ISO C++ comitee to be part of C++20.  To see a summary of changes since this project was forked:
 ```
-$ BRANCH=master
-$ git diff --stat `git rev-list --reverse $BRANCH | sed -n 2p` $BRANCH
+$ git diff --stat master{^{/SVN},}
 ```
 
 As of Mon Jul 9 2018, this is a work in progress, however it is quite complete (see
@@ -49,10 +48,10 @@ For additional build instruction see the [Clang project page](http://clang.llvm.
 the [Getting Started](http://clang.llvm.org/get_started.html) guide.
 
 ## Command line options
-Three new options were added to the Clang driver: `-build-level=`, `-contract-violation-handler=`
-and `-enable-continue-after-violation`, e.g.
+Four new options were added to the Clang driver: `-build-level=`, `-axiom-mode=`, `-contract-violation-handler=` and `-enable-continue-after-violation`, e.g.
 ```
-$ clang++ -std=c++14 [-build-level=[off|default|audit]] [-contract-violation-handler=my_handler]
+$ clang++ -std=c++14 [-build-level=(off|default|audit)] [-axiom-mode=(off|on)]
+  [-contract-violation-handler=my_handler]
   [-enable-continue-after-violation] ...
 ```
 
@@ -60,6 +59,8 @@ Because the `contract` header is contained in the tools/clang/lib/Headers/ direc
 
 The `-build-level=` option allows to specify the build level of the translation (P0542R5
 Proposed Wording, Section 10.6.11.12). If unspecified, it defaults to default.
+
+The `-axiom-mode=` option allows changing the axiom mode of the translation. If set, the compiler assumes any [[expects]], [[ensures]] or [[assert]] tagged as axiom as if `__builtin_assume()` was there. If unspecified, it defaults to on.
 
 The other two options allow specifying a custom violation handler and the violation
 continuation mode, as per Section 10.6.11.16 and 10.6.11.18 of the current wording.
@@ -98,8 +99,6 @@ merged into the most recent redeclaration.
 
 Also, these features may be added to improve the quality of the implementation (not required 
 by the TS):
-- Conditional expressions that are part of contract attributes may be assumed to be true, even
-if the build mode is off (as if `__builtin_assume()` was specified).
 - Static evaluation of contracts (if possible).
 
 ## Authors

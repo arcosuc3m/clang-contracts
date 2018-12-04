@@ -3637,6 +3637,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Manually forward options to CC1
   if (Arg *A = Args.getLastArg(options::OPT_build_level_EQ))
     A->render(Args, CmdArgs);
+  if (Arg *A = Args.getLastArg(options::OPT_axiom_mode_EQ))
+    A->render(Args, CmdArgs);
   if (Arg *A = Args.getLastArg(options::OPT_contract_violation_handler_EQ))
     A->render(Args, CmdArgs);
   if (Arg *A = Args.getLastArg(options::OPT_enable_continue_after_violation))

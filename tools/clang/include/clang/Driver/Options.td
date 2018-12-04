@@ -2292,12 +2292,17 @@ def std_EQ : Joined<["-", "--"], "std=">, Flags<[CC1Option]>,
     #include "clang/Frontend/LangStandards.def"
     ;
   }]>;
+
+// P0542R5: support for C++ contract
 def build_level_EQ : Joined<["-", "--"], "build-level=">, Flags<[CC1Option, CC1AsOption, CoreOption]>,
-  HelpText<"Build level for this translation unit">, Values<"off,default,audit">;
+  HelpText<"P0542R5: build level for this translation unit">, Values<"off,default,audit">;
+def axiom_mode_EQ : Joined<["-", "--"], "axiom-mode=">, Flags<[CC1Option, CC1AsOption, CoreOption]>,
+  HelpText<"Axiom mode for this translation unit. If =on, axiom contracts are assumed as if __builtin_assume() was specified">, Values<"off,on">;
 def contract_violation_handler_EQ : Joined<["-", "--"], "contract-violation-handler=">, Flags<[CC1Option, CC1AsOption, CoreOption]>,
   HelpText<"Name of the handler function to be called if a contract is violated">;
-def enable_continue_after_violation : Joined<["-", "--"], "enable-continue-after-violation">, Flags<[CC1Option, CC1AsOption, CoreOption]>,
+def enable_continue_after_violation : Joined<["-", "--"], "enable-continue-after-violation">, Flags<[CC1Option]>,
   HelpText<"Enable continuation after violation of a contract">;
+
 def stdlib_EQ : Joined<["-", "--"], "stdlib=">, Flags<[CC1Option]>,
   HelpText<"C++ standard library to use">, Values<"libc++,libstdc++,platform">;
 def sub__library : JoinedOrSeparate<["-"], "sub_library">;
