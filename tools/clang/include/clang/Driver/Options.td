@@ -2300,7 +2300,7 @@ def axiom_mode_EQ : Joined<["-", "--"], "axiom-mode=">, Flags<[CC1Option, CC1AsO
   HelpText<"Axiom mode for this translation unit. If =on, axiom contracts are assumed as if __builtin_assume() was specified">, Values<"off,on">;
 def contract_violation_handler_EQ : Joined<["-", "--"], "contract-violation-handler=">, Flags<[CC1Option, CC1AsOption, CoreOption]>,
   HelpText<"Name of the handler function to be called if a contract is violated">;
-def enable_continue_after_violation : Joined<["-", "--"], "enable-continue-after-violation">, Flags<[CC1Option]>,
+def fcontinue_after_violation : Joined<["-", "--"], "fcontinue-after-violation">, Flags<[CC1Option]>,
   HelpText<"Enable continuation after violation of a contract">;
 
 def stdlib_EQ : Joined<["-", "--"], "stdlib=">, Flags<[CC1Option]>,

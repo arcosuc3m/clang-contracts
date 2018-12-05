@@ -48,11 +48,11 @@ For additional build instruction see the [Clang project page](http://clang.llvm.
 the [Getting Started](http://clang.llvm.org/get_started.html) guide.
 
 ## Command line options
-Four new options were added to the Clang driver: `-build-level=`, `-axiom-mode=`, `-contract-violation-handler=` and `-enable-continue-after-violation`, e.g.
+Four new options were added to the Clang driver: `-build-level=`, `-axiom-mode=`, `-contract-violation-handler=` and `-fcontinue-after-violation`, e.g.
 ```
 $ clang++ -std=c++14 [-build-level=(off|default|audit)] [-axiom-mode=(off|on)]
   [-contract-violation-handler=my_handler]
-  [-enable-continue-after-violation] ...
+  [-fcontinue-after-violation] ...
 ```
 
 Because the `contract` header is contained in the tools/clang/lib/Headers/ directory, you will probably need to add the `-idirafter path-to-clang-contracts-repo/tools/clang/lib/Headers/` option.
