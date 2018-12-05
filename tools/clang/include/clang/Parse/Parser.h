@@ -122,10 +122,9 @@ class Parser : public CodeCompletionHandler {
   mutable IdentifierInfo *Ident_instancetype;
 
   /// \brief Identifiers for contract-level (C++ contracts).
-  IdentifierInfo *Ident_axiom;
-  IdentifierInfo *Ident_default;
-  IdentifierInfo *Ident_audit;
-  IdentifierInfo *Ident_always;
+  IdentifierInfo *Ident_axiom,
+                 *Ident_default,
+                 *Ident_audit;
   IdentifierInfo *Ident_________ret________;
 
   /// \brief Identifier for "introduced".

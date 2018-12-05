@@ -558,7 +558,6 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
 void CodeGenFunction::EmitAssertAttr(const AssertAttr *_Attr,
                                      SourceLocation Loc) {
   unsigned Level = llvm::StringSwitch<unsigned>(_Attr->getLevel()->getName())
-      .Case("always", 0)  // Assert is emitted even if -build-level=off
       .Case("default", 1)
       .Case("audit", 2)
       .Case("axiom", 3)

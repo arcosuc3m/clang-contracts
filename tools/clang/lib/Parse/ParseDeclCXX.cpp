@@ -3856,7 +3856,6 @@ unsigned Parser::ParseContractAttrArgs(IdentifierInfo *AttrName,
     Ident_axiom = PP.getIdentifierInfo("axiom");
     Ident_default = PP.getIdentifierInfo("default");
     Ident_audit = PP.getIdentifierInfo("audit");
-    Ident_always = PP.getIdentifierInfo("always");
     Ident_________ret________ = PP.getIdentifierInfo(FunctionDecl::CXX__INTERNAL_RET);
   }
 
@@ -3877,7 +3876,7 @@ unsigned Parser::ParseContractAttrArgs(IdentifierInfo *AttrName,
   }
 
   if (!(II1 == Ident_axiom || II1 == Ident_default
-                || II1 == Ident_audit || II1 == Ident_always)) {
+                || II1 == Ident_audit)) {
     if (!II2 && AttrKind == AttributeList::AT_Ensures) {
       II2 = II1;
       II1 = Ident_default;
@@ -3999,7 +3998,6 @@ bool Parser::ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
 ///         '[' '[' 'ensures' contract-level[opt] ':' conditional-expression ']' ']'
 ///         '[' '[' 'assert' contract-level[opt] ':' conditional-expression ']' ']'
 /// [D0542R2] contract-level:
-///         'always'
 ///         'default'
 ///         'audit'
 ///         'axiom'

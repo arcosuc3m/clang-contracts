@@ -170,7 +170,8 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
     CoverageMapping.reset(new CoverageMappingModuleGen(*this, *CoverageInfo));
 
   // Cached StringLiteral instances for contract-level strings
-  StringRef SR_contract_level[] = { "always", "default", "audit" };
+  StringRef SR_contract_level[] = { "always"/* P0542R5: deprecated*/,
+				    "default", "audit" };
   for (auto &i : SR_contract_level) {
     __contract_violation_SL.push_back(StringLiteral::Create(C, i, StringLiteral::Ascii, false,
                                                             C.getConstantArrayType(C.getConstType(C.CharTy),
