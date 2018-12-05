@@ -1,6 +1,9 @@
 /// tsan_csv.h - You should include this file before using the CSV interface
 /// Last modified: 8-nov-2018 14:41
 ///
+#ifndef TSAN_CSV_H
+#define TSAN_CSV_H
+
 #ifndef NO_CONTRACT_H
 # include <contract>
 #endif
@@ -66,7 +69,7 @@ event_set &set_intersection(const event_set &a, const event_set &b, const Ts &..
     return true; }
 
   // TODO: the [[csv::event_sets(...)]] attribute is not implemented yet. Instead use this macro.
-#define CSV__EVENT_SETS(...) csv::event_set __VA_ARGS__;
+#define CSV__EVENT_SETS(...) mutable csv::event_set __VA_ARGS__;
   
 // DEPRECATED: Checks a semantic expression, if false prints a message
 // bool valid_if(bool expr, const char *msg) __attribute__((deprecated));
@@ -76,3 +79,5 @@ extern "C" {
   // This contract violation handler is used instead the old valid_if() function
   void __csv_violation_handler(const std::contract_violation &cv);
 }
+
+#endif // TSAN_CSV_H
