@@ -1292,21 +1292,29 @@ SynthesizeCheckedFunctionBody(CodeGenModule &CGM, FunctionDecl *D_body, Function
 ///  CXXMethodDecl, don't care if it is a CXX{Constructor,Destructor}Decl.
 static FunctionDecl *
 PartialCopyFunctionDecl(ASTContext &Context, FunctionDecl *FD) {
+  // If this name is a simple identifier, reuse the DeclarationName. Otherwise,
+  // (for a constructor, destructor, or conversion function) construct a non-
+  // special name (required).
+  auto DN_FD = FD->getDeclName();
+  auto DN_ret = DN_FD.isIdentifier() ? DN_FD
+    : DeclarationName{&Context.Idents.get(DN_FD.getAsString())};
+  DeclarationNameInfo NI_ret{DN_ret, SourceLocation{}};
+
   FunctionDecl *ret;
   if (isa<CXXMethodDecl>(FD)) {
     ret = CXXMethodDecl::Create(Context, cast<CXXRecordDecl>(FD->getDeclContext()),
-				FD->getLocStart(), FD->getNameInfo(),
-				FD->getType(), FD->getTypeSourceInfo(),
-				FD->getStorageClass(), FD->isInlineSpecified(),
-				FD->isConstexpr(), FD->getLocEnd());
+				SourceLocation{}, NI_ret, FD->getType(),
+				FD->getTypeSourceInfo(), FD->getStorageClass(),
+				FD->isInlineSpecified(), FD->isConstexpr(),
+				SourceLocation{});
   } else {
-    ret = FunctionDecl::Create(Context, FD->getDeclContext(), FD->getLocStart(),
-			       FD->getNameInfo(), FD->getType(), FD->getTypeSourceInfo(),
+    ret = FunctionDecl::Create(Context, FD->getDeclContext(), SourceLocation{},
+			       NI_ret, FD->getType(), FD->getTypeSourceInfo(),
 			       FD->getStorageClass(), FD->isInlineSpecified(),
 			       FD->hasWrittenPrototype(), FD->isConstexpr());
   }
-  ret->setImplicit();
 
+  ret->setImplicit();
   ret->setParams(FD->parameters());
   ret->setBody(FD->getBody());
   if (FD->getPrimaryTemplate())
