@@ -3886,15 +3886,23 @@ unsigned Parser::ParseContractAttrArgs(IdentifierInfo *AttrName,
     }
   }
 
-  // make alias for II2 pointing to the internal ________ret________ declaration
-  if (II2)
-    DeclarationName(II2).setFETokenInfo(________ret________);
-
   // expect ":" and parse expression
   if (ExpectAndConsume(tok::colon))
     goto out;
 
-  ArgExpr = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+  {
+    // The C/C++ language frontend uses IdentifierInfo::FETokenInfo to tie the
+    // identifier with its decl (or decl chain).  Therefore, setFETokenInfo()
+    // is used here to temporarily link II2 to the ________ret________ VarDecl.
+    void *__TI;
+    if (II2) {
+      __TI = II2->getFETokenInfo<void>();
+      II2->setFETokenInfo(________ret________);
+    }
+    ArgExpr = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+    if (II2)
+      II2->setFETokenInfo(__TI);
+  }
   if (ArgExpr.isInvalid() || !Tok.is(tok::r_square)) {
     Diag(Tok.getLocation(), diag::err_expected) << tok::r_square;
     goto out;
